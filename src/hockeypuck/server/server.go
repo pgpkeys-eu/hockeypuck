@@ -165,18 +165,20 @@ func DialStorage(settings *Settings) (storage.Storage, error) {
 }
 
 type stats struct {
-	Now         string           `json:"now"`
-	Version     string           `json:"version"`
-	Hostname    string           `json:"hostname"`
-	Nodename    string           `json:"nodename"`
-	Contact     string           `json:"server_contact"`
-	HTTPAddr    string           `json:"httpAddr"`
-	QueryConfig statsQueryConfig `json:"queryConfig"`
-	ReconAddr   string           `json:"reconAddr"`
-	Software    string           `json:"software"`
-	Peers       []statsPeer      `json:"peers"`
+	Now           string           `json:"now"`
+	Version       string           `json:"version"`
+	Hostname      string           `json:"hostname"`
+	Nodename      string           `json:"nodename"`
+	Contact       string           `json:"contact"`
+	HTTPAddr      string           `json:"httpAddr"`
+	QueryConfig   statsQueryConfig `json:"queryConfig"`
+	ReconAddr     string           `json:"reconAddr"`
+	Software      string           `json:"software"`
+	Peers         []statsPeer      `json:"peers"`
+	NumKeys       int              `json:"numkeys,omitempty"`
+	ServerContact string           `json:"server_contact,omitempty"`
 
-	Total  int                   `json:"numkeys"`
+	Total  int
 	Hourly []loadStat
 	Daily  []loadStat
 }
@@ -231,7 +233,9 @@ func (s *Server) stats() (interface{}, error) {
 		_t, _ := time.Parse(time.RFC3339, result.Now)
 		result.HTTPAddr = strings.Split(s.settings.HKP.Bind, ":")[1]
 		result.Now = _t.Format("2006-01-02 15:04:05 MST")
+		result.NumKeys = sksStats.Total
 		result.ReconAddr = strings.Split(s.settings.Conflux.Recon.Settings.ReconAddr, ":")[1]
+		result.ServerContact = s.settings.Contact
 	}
 
 	nodename, err := os.Hostname()
