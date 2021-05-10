@@ -34,7 +34,8 @@ Other platforms may work but may require some customization.
 5. (Optional) Set up TLS with `./init-letsencrypt.bash`. Answer the prompts as
    needed. If you want to test LE first with staging before getting a real
    cert, change `staging=0` to `staging=1` in this script.
-6. `docker-compose up -d` and your Hockeypuck should be live.
+6. Load the passwords into your shell: `. ./site.profile`
+7. `docker-compose up -d` and your Hockeypuck should be live.
 
 # Configuration
 
