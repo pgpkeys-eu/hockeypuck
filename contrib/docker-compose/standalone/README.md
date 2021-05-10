@@ -13,6 +13,14 @@ Tested on official Ubuntu 18.04 cloud images, with dependencies installed using
 
 Other platforms may work but may require some customization.
 
+# Building
+
+* `cd` to the base directory of this repository
+* Run `docker build .` - it should return e.g. "Successfully built deadbeef1234"
+* Tag the build: `docker tag deadbeef1234 hockeypuck/hockeypuck:2.1.0` 
+  (replacing `deadbeef1234` with the output of the build)
+* Now `cd` back to this directory before continuing below
+
 # Installation
 
 0. (Optional) Register a DNS name for your server's public IP address.
