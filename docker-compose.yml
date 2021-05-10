@@ -12,11 +12,11 @@ services:
     - postgres
     volumes:
     - ./etc:/hockeypuck/etc
-    - ./keydump:/hockeypuck/keydump
+    - pgp_import:/hockeypuck/import
     - hkp_data:/hockeypuck/data
 
   postgres:
-    image: postgres
+    image: postgres:11
     restart: always
     environment:
     - POSTGRES_USER=docker
@@ -28,4 +28,4 @@ services:
 volumes:
   hkp_data: {}
   pg_data: {}
-
+  pgp_import: {}
