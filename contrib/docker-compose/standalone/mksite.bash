@@ -11,6 +11,6 @@ FQDN=hockeypuck.io
 EMAIL=hockeypuck@hockeypuck.io
 POSTGRES_USER="hkp"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
-HOCKEYPUCK_VERSION=2.1.0
+RELEASE=2.1.0
 EOF
 chmod 600 $HERE/.env

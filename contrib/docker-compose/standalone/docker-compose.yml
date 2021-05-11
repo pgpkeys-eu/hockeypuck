@@ -1,7 +1,7 @@
 version: '2'
 services:
   hockeypuck:
-    image: hockeypuck/hockeypuck:${HOCKEYPUCK_VERSION}
+    image: hockeypuck/hockeypuck:${RELEASE}
     ports:
     - "11370:11370"
     - "11371:11371"

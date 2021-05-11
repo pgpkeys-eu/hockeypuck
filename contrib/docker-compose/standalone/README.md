@@ -17,9 +17,9 @@ Other platforms may work but may require some customization.
 
 * `cd` to the base directory of this repository
 * Run `docker build .` - it should return e.g. "Successfully built DEADBEEF1234"
-* Tag the build: `docker tag DEADBEEF1234 hockeypuck/hockeypuck:HOCKEYPUCK_VERSION`
+* Tag the build: `docker tag DEADBEEF1234 hockeypuck/hockeypuck:RELEASE`
   (replacing `DEADBEEF1234` with the hash emitted by `docker build .`,
-  and `HOCKEYPUCK_VERSION` as appropriate, cf `../../../debian/changelog` and/or `./mksite.bash`)
+  and `RELEASE` as appropriate, cf `../../../debian/changelog` and/or `./mksite.bash`)
 * Now `cd` back to this directory before continuing below
 
 # Installation
@@ -28,7 +28,7 @@ Other platforms may work but may require some customization.
 * Configure your ingress firewall to allow ports: 80, 443, 11370, 11371
 * Create a `.env` file by running `./mksite.bash`.
 * Customize the settings in `.env` to your liking.
-   Make sure that `HOCKEYPUCK_VERSION` matches the docker tag you created above.
+   Make sure that `RELEASE` matches the docker tag you created above.
    (Optional) If you're using DNS & TLS, make sure FQDN and EMAIL are correct;
    they're used for Let's Encrypt.
 * Generate hockeypuck and nginx configuration from your site settings with
