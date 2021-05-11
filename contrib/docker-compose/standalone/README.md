@@ -25,8 +25,8 @@ Other platforms may work but may require some customization.
 
 0. (Optional) Register a DNS name for your server's public IP address.
 1. Configure your ingress firewall to allow ports: 80, 443, 11370, 11371
-2. Create a `site.profile` by running `./mksite.bash`.
-3. Customize the settings in `site.profile` to your liking.
+2. Create a `.env` file by running `./mksite.bash`.
+3. Customize the settings in `.env` to your liking.
    (Optional) If you're using DNS & TLS, make sure FQDN and EMAIL are correct;
    they're used for Let's Encrypt.
 4. Generate hockeypuck and nginx configuration from your site settings with
@@ -34,8 +34,7 @@ Other platforms may work but may require some customization.
 5. (Optional) Set up TLS with `./init-letsencrypt.bash`. Answer the prompts as
    needed. If you want to test LE first with staging before getting a real
    cert, change `staging=0` to `staging=1` in this script.
-6. Load the passwords into your shell: `. ./site.profile`
-7. `docker-compose up -d` and your Hockeypuck should be live.
+6. `docker-compose up -d` and your Hockeypuck should be live.
 
 # Configuration
 
