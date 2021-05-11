@@ -2,4 +2,5 @@
 
 set -eu
 
-docker-compose exec standalone_import-keys_1 /bin/bash -c "cd /import; rsync -avr rsync://rsync.cyberbits.eu/sks/dump ."
+docker-compose up -d import-keys
+docker-compose exec import-keys /bin/bash -c "cd /import; rsync -avr rsync://rsync.cyberbits.eu/sks/dump ."

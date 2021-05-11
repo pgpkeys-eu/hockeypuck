@@ -15,7 +15,7 @@ services:
     - pgp_import:/hockeypuck/import
 
   import-keys:
-    image: ubuntu:18.04
+    image: instrumentisto/rsync-ssh
     entrypoint: /bin/bash
     tty: true
     volumes:
