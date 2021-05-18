@@ -13,7 +13,10 @@ services:
     - ./hockeypuck/etc:/hockeypuck/etc
     - hkp_data:/hockeypuck/data
     - pgp_import:/hockeypuck/import
-
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
   import-keys:
     image: instrumentisto/rsync-ssh
     entrypoint: /bin/sh
@@ -55,6 +58,10 @@ services:
     - ./nginx/conf.d:/etc/nginx/conf.d
     - certbot_conf:/etc/letsencrypt
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   certbot:
     image: certbot/certbot
