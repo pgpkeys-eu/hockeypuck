@@ -28,6 +28,7 @@ Other platforms may work but may require some customization.
 * Configure your ingress firewall to allow ports: 80, 443, 11370, 11371
 * Create a `.env` file by running `./mksite.bash`.
 * Customize the settings in `.env` to your liking.
+   DO NOT surround values with double quotes.
    Make sure that `RELEASE` matches the docker tag you created above.
    (Optional) If you're using DNS & TLS, make sure FQDN and EMAIL are correct;
    they're used for Let's Encrypt.
