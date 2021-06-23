@@ -36,7 +36,7 @@ Other platforms may work but may require some customization.
    `./mkconfig.bash`.
 * (Optional) Set up TLS with `./init-letsencrypt.bash`. Answer the prompts as
    needed. If you want to test LE first with staging before getting a real
-   cert, change `staging=0` to `staging=1` in this script.
+   cert, set the environment variable `CERTBOT_STAGING=1`.
 * Download a keydump by running `./sync-sks-dump.bash`.
 * `docker-compose up -d` and your Hockeypuck should be live.
 
