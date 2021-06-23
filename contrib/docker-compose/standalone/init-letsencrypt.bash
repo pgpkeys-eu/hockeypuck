@@ -37,7 +37,6 @@ fi
 domains=($FQDN)
 rsa_key_size=4096
 email="$EMAIL" # Adding a valid address is strongly recommended
-staging=0 # Set to 1 if you're testing your setup to avoid hitting request limits
 
 echo "### Downloading recommended TLS parameters ..."
 docker-compose run --rm --entrypoint "/bin/sh -c \"\
@@ -81,7 +80,7 @@ case "$email" in
 esac
 
 # Enable staging mode if needed
-if [ $staging != "0" ]; then staging_arg="--staging"; else staging_arg=""; fi
+if [ ${CERTBOT_STAGING:-} != "0" ]; then staging_arg="--staging"; else staging_arg=""; fi
 
 docker-compose run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www \
