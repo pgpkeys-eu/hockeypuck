@@ -65,11 +65,11 @@ This script may need to be edited depending on the availability of dump servers.
 
 ## Loading a keyserver dump
 
-Use `load-sks-dump.bash` to load the keyserver dump into a running Hockeypuck.
+Use `load-sks-dump.bash` to load the keyserver dump (make sure that Hockeypuck is not running).
 This can be I/O intensive on PostgreSQL and may take several hours (or days) to complete.
 
 ## Removing stale dumpfiles
 
 Use `./clean-sks-dump.bash` to remove stale dump files from the import volume and save space.
 This will preserve the timestamp file that indicates a keydump has been loaded.
-To start from scratch, destroy the import volume using `docker volume rm pgp_import`.
+To start from scratch instead, destroy the import volume using `docker volume rm pgp_import`.
