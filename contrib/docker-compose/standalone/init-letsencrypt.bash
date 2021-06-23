@@ -41,8 +41,9 @@ staging=0 # Set to 1 if you're testing your setup to avoid hitting request limit
 
 echo "### Downloading recommended TLS parameters ..."
 docker-compose run --rm --entrypoint "\
-  curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > /etc/letsencrypt/options-ssl-nginx.conf && \
-  curl -s https://ssl-config.mozilla.org/ffdhe2048.txt > /etc/letsencrypt/ssl-dhparams.pem" certbot
+  cd /etc/letsencrypt && \
+  wget -q https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf && \
+  wget -q https://ssl-config.mozilla.org/ffdhe2048.txt -O /etc/letsencrypt/ssl-dhparams.pem" certbot
 echo
 
 echo "### Creating dummy certificates for $domains ..."
