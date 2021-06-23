@@ -92,5 +92,5 @@ docker-compose run --rm --entrypoint "\
     --force-renewal" certbot
 echo
 
-echo "### Reloading nginx ..."
-docker-compose exec nginx nginx -s reload
+echo "### Shutting down ..."
+docker-compose down
