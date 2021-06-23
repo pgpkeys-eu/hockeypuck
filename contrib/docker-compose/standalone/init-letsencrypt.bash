@@ -40,21 +40,21 @@ email="$EMAIL" # Adding a valid address is strongly recommended
 staging=0 # Set to 1 if you're testing your setup to avoid hitting request limits
 
 echo "### Downloading recommended TLS parameters ..."
-docker-compose run --rm --entrypoint "\
+docker-compose run --rm --entrypoint "/bin/sh -c \"\
   cd /etc/letsencrypt && \
-  wget -q https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf && \
-  wget -q https://ssl-config.mozilla.org/ffdhe2048.txt -O /etc/letsencrypt/ssl-dhparams.pem" certbot
+  wget -q https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf -O options-ssl-nginx.conf && \
+  wget -q https://ssl-config.mozilla.org/ffdhe2048.txt -O ssl-dhparams.pem\"" certbot
 echo
 
 echo "### Creating dummy certificates for $domains ..."
 for domain in "${domains[@]}"; do
   path="/etc/letsencrypt/live/$domain"
-  docker-compose run --rm --entrypoint "\
+  docker-compose run --rm --entrypoint "/bin/sh -c \"\
     mkdir -p $path && \
     openssl req -x509 -nodes -newkey rsa:1024 -days 1\
       -keyout '$path/privkey.pem' \
       -out '$path/fullchain.pem' \
-      -subj '/CN=localhost'" certbot
+      -subj '/CN=localhost'\"" certbot
   echo
 done
 
@@ -63,13 +63,9 @@ docker-compose up --force-recreate -d nginx
 echo
 
 echo "### Deleting dummy certificates for $domains ..."
-for domain in "${domains[@]}"; do
-  docker-compose run --rm --entrypoint "\
-    rm -Rf /etc/letsencrypt/live/$domain && \
-    rm -Rf /etc/letsencrypt/archive/$domain && \
-    rm -Rf /etc/letsencrypt/renewal/$domain.conf" certbot
-  echo
-done
+docker-compose run --rm --entrypoint "/bin/sh -c \"\
+  rm -Rf /etc/letsencrypt/live/* /etc/letsencrypt/archive/* /etc/letsencrypt/renewal/*\"" certbot
+echo
 
 echo "### Requesting Let's Encrypt certificate for $domains ..."
 #Join $domains to -d args
