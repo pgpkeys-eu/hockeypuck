@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name FQDN;
+    server_name ${FQDN};
     location /.well-known/acme-challenge/ {
         # use defaults
     }
@@ -11,8 +11,8 @@ server {
 server {
     listen 443 ssl;
     server_name FQDN;
-    ssl_certificate /etc/letsencrypt/live/FQDN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/FQDN/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/${FQDN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${FQDN}/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
     location /monitoring/prometheus {
