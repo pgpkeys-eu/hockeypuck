@@ -347,7 +347,7 @@ func (s *Server) Start() error {
 	}
 
 	if s.sksPeer != nil {
-		if s.settings.Conflux.Recon.ReconAddr == ":0" {
+		if s.settings.Conflux.Recon.ReconAddr == "none" {
 			s.sksPeer.StartMode(recon.PeerModeGossipOnly)
 		} else {
 			s.sksPeer.Start()
