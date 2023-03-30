@@ -1,4 +1,4 @@
-version: '2'
+version: '2.1'
 services:
   hockeypuck:
     image: hockeypuck/hockeypuck:${RELEASE}
@@ -6,8 +6,6 @@ services:
       context: ../../..
     ports:
     - "11370:11370"
-    - "11371:11371"
-    - "9626"
     restart: always
     depends_on:
     - postgres
@@ -32,48 +30,57 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.12.0
-    ports:
-    - "9090"
     restart: always
-    depends_on:
-    - hockeypuck
     volumes:
     - prom_data:/prometheus
     - ./prometheus/etc:/etc/prometheus
 
-  nginx:
-    image: nginx:1.17.3
+  haproxy:
+    image: haproxy:2.6
     ports:
     - "80:80"
     - "443:443"
+    - "11371:11371"
+    user: root
     restart: always
     depends_on:
-    - hockeypuck
+    - certbot
     - prometheus
     volumes:
-    - ./nginx/conf.d:/etc/nginx/conf.d
+    - ./haproxy/etc/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    - ./haproxy/etc/lists:/usr/local/etc/haproxy/lists
+    - haproxy_cache:/var/cache/haproxy
     - certbot_conf:/etc/letsencrypt
-    - certbot_root:/etc/nginx/html
-    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    entrypoint: "/bin/sh -c 'touch /var/cache/haproxy/server-state /var/cache/haproxy/tor_exit_relays.list; haproxy -f /usr/local/etc/haproxy/haproxy.cfg -p /run/haproxy.pid & trap exit TERM; while :; do sleep 1800; haproxy -f /usr/local/etc/haproxy/haproxy.cfg -p /run/haproxy.pid -sf $$(cat /run/haproxy.pid) -x /var/cache/haproxy/haproxy.admin.sock; done'"
     logging:
       options:
         max-size: "10m"
         max-file: "3"
 
+  haproxy_cache:
+    image: instrumentisto/rsync-ssh
+    restart: always
+    depends_on:
+    - haproxy
+    volumes:
+    - haproxy_cache:/var/cache/haproxy
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 1800; wget \"https://www.dan.me.uk/torlist/?exit\" -O /var/cache/haproxy/tor_exit_relays.list; done'"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "1"
+
   certbot:
     image: certbot/certbot
     restart: always
-    depends_on:
-      - nginx
     volumes:
     - certbot_conf:/etc/letsencrypt
-    - certbot_root:/etc/nginx/html
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot --standalone renew; for i in /etc/letsencrypt/live/*; do ln -sf privkey.pem $$i/fullchain.pem.key; done; sleep 12h & wait $${!}; done;'"
 
 volumes:
   hkp_data: {}
   pg_data: {}
   prom_data: {}
   pgp_import: {}
+  haproxy_cache: {}
   certbot_conf: {}
-  certbot_root: {}
