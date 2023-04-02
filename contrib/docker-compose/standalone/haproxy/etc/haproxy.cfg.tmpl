@@ -101,8 +101,9 @@ backend st_tor_request_rate
 backend st_tor_24h_ban
     stick-table type ip size 1m expire 24h store gpc0
 
+# "1 month" here actually means "24 days", because haproxy's maximum is int32 milliseconds
 backend st_tor_1month_ban
-    stick-table type ip size 1m expire 30d store gpc0
+    stick-table type ip size 1m expire 24d store gpc0
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
