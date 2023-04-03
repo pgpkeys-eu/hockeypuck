@@ -17,7 +17,7 @@ At minimum, docker and docker-compose (v1.5 or later) must be installed in advan
 
 # Migration of existing deployments (!BREAKING CHANGES!)
 
-If you have already created a standalone deployment you will need to migrate from nginx to haproxy.
+If you have already created a standalone deployment using nginx (March 2023 or earlier) you will need to migrate from nginx to haproxy.
 
 * `cd` into this directory
 * BACK UP EVERYTHING by incanting `cp -a . /path/to/somewhere/safe/`

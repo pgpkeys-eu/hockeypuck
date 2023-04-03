@@ -1,24 +1,28 @@
 # Sample haproxy configuration for keyservers
 # (c) Martin Dobrev, Andrew Gallagher 2023
 
-# This file is optimised for hockeypuck's docker-compose/standalone deployment, however it is
+# This file is optimised for hockeypuck's `docker-compose/standalone` deployment, however it is
 # applicable to other deployments with minor edits to backend definitions and file paths.
 #
-# To facilitate portability, it has been parameterised using envsubst notation: ${...}
-# These parameters are populated by the docker-compose/standalone scripts.
+# To facilitate portability, it has been parameterised using `envsubst` notation: ${...}
+# These parameters are populated by the `docker-compose/standalone/mkconfig.bash` script.
 
 # FQDN                  the FQDN of this server, note that aliases must also be configured
 # CERTBOT_HOST_PORT     backend for ACME requests, in the form `host:port`
 # PROMETHEUS_HOST_PORT  backend for prometheus monitoring, in the form `host:port`
 # KEYSERVER_HOST_PORT   backend for the keyserver, in the form `host:port`
 # HAP_CONF_DIR          location of config files
-#                       normally /etc/haproxy for baremetal, or /usr/local/etc/haproxy for docker
-#                       it must have a subdir lists/ containing the blacklist.list and whitelist.list files
-# HAP_CACHE_DIR         persistent state store, e.g. tor_exit_relays.list, this must be updated externally
-# HAP_CERT_DIR          parent directory for SSL/TLS certificates
-#                       it must have a subdirectory called FQDN containing the certs
+#                       normally `/etc/haproxy` for baremetal, `/usr/local/etc/haproxy` for docker
+#                       it must have a subdir `lists` containing `blacklist.list` and `whitelist.list` (can be empty files)
+# HAP_CACHE_DIR         persistent state store, must contain `tor_exit_relays.list` (refreshed externally)
+# HAP_CERT_DIR          parent directory of SSL/TLS certificate directory
+#                       it must contain a subdirectory named after the FQDN, itself containing `fullchain.pem` and `fullchain.pem.key`
 #                       e.g. for letsencrypt this will be `/etc/letsencrypt/live`
 # HAP_DHPARAM_FILE      Diffie-Hellman parameters for SSL/TLS
+
+# Note that after the cache files or the SSL certs are updated externally, haproxy should be soft reloaded using e.g.:
+#
+#   haproxy -f ${HAP_CONF_DIR}/haproxy.cfg -p /run/haproxy.pid -sf $$(cat /run/haproxy.pid) -x ${HAP_CACHE_DIR}/haproxy.admin.sock
 
 global
     # Map threads to individual CPU cores
