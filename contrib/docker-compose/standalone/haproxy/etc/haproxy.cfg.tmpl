@@ -159,8 +159,8 @@ frontend fe_http_handler
     #http-request set-var(txn.cdn) str(ENABLED)
 
     # HAProxy behind Cloudflare and/or a reverse proxy
-    acl is_behind_cloudflare if { var(txn.cloudflare) -m found }
-    acl is_behind_proxy      if { var(txn.cdn) -m found }
+    acl is_behind_cloudflare var(txn.cloudflare) -m found
+    acl is_behind_proxy      var(txn.cdn) -m found
 
     # ~~ End HAProxy LB Configuration ~~
 
