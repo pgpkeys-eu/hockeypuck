@@ -144,7 +144,30 @@ frontend fe_http_handler
 
     mode http
 
-    # Instance is not stopping
+    # ~~ HAProxy LB Configuration ~~
+    # Enable/Disable trust of Cloudflare and/or X-Forwarded-For headers
+    #
+    # By default HAProxy is running at the edge of your infrastructure
+    # and picks the client IP from the TCP connection. If you are running
+    # HAProxy behind a reverse proxy or Cloudflare, you need to enable
+    # the following options to trust the headers.
+
+    # HAProxy behind Cloudflare
+    #http-request set-var(txn.cloudflare) str(ENABLED)
+
+    # HAProxy behind a reverse proxy
+    #http-request set-var(txn.cdn) str(ENABLED)
+
+    # HAProxy behind Cloudflare and/or a reverse proxy
+    acl is_behind_cloudflare if { var(txn.cloudflare) -m found }
+    acl is_behind_proxy      if { var(txn.cdn) -m found }
+
+    # ~~ End HAProxy LB Configuration ~~
+
+    # Host header is set
+    acl is_host_set hdr(host) -m found
+
+    # Instance is stopping
     acl stopping stopping eq 1
 
     # Match ACME challenge
@@ -186,9 +209,6 @@ frontend fe_http_handler
     capture request header Referer len 64
     capture request header User-Agent len 128
     capture request header Content-Length len 10
-    capture request header X-Haproxy-Secure len 3
-    capture request header X-Haproxy-ACL len 256
-    capture request header X-Haproxy-TARPIT len 256
 
     # Add the X-Forwarded-For header
     option forwardfor except 127.0.0.0/8
@@ -205,10 +225,32 @@ frontend fe_http_handler
     acl HAS_CF_CONNECTING_IP hdr_cnt(CF-Connecting-IP) eq 1
     acl HAS_X_FORWARDED_FOR hdr_cnt(X-Forwarded-For) eq 1
 
+    # ~~ HAProxy client IP tracking ~~
     # Track requests from CF-Connecting-IP or X-Forwarded-For header, or source IP into the global ddos stick-table
-    tcp-request content track-sc0 hdr_ip(CF-Connecting-IP,-1) table st_global_ddos if HTTP HAS_CF_CONNECTING_IP !is_tor_exit_relay
-    tcp-request content track-sc0 hdr_ip(X-Forwarded-For,-1) table st_global_ddos if HTTP !HAS_CF_CONNECTING_IP HAS_X_FORWARDED_FOR !is_tor_exit_relay
-    tcp-request content track-sc0 src table st_global_ddos if HTTP !HAS_CF_CONNECTING_IP !HAS_X_FORWARDED_FOR !is_tor_exit_relay
+    # Please see above for options to enable/disable tracking of client IPs from CF-Connecting-IP or X-Forwarded-For headers
+
+    # Track CF-Connecting-IP header if present and behind Cloudflare
+    tcp-request content track-sc0 hdr_ip(CF-Connecting-IP,-1) table st_global_ddos if HTTP HAS_CF_CONNECTING_IP is_behind_cloudflare
+    http-request set-var(txn.clientIP) hdr_ip(CF-Connecting-IP,-1) if HTTP HAS_CF_CONNECTING_IP is_behind_cloudflare
+
+    # Track X-Forwarded-For header if present and behind a proxy
+    tcp-request content track-sc0 hdr_ip(X-Forwarded-For,-1) table st_global_ddos if HTTP HAS_X_FORWARDED_FOR is_behind_proxy
+    http-request set-var(txn.clientIP) hdr_ip(X-Forwarded-For,-1) if HTTP HAS_X_FORWARDED_FOR is_behind_proxy
+
+    # Track source IP
+    tcp-request content track-sc0 src table st_global_ddos if HTTP !is_behind_cloudflare !is_behind_proxy
+    http-request set-var(txn.clientIP) src if HTTP !is_behind_cloudflare !is_behind_proxy
+
+    # Set CF-Connecting-IP header to the tracked client IP. All subsequent requests from this client will have this header set.
+    # And all ACL rules in backends etc. must be evaluated against this header.
+    http-request set-header CF-Connecting-IP var(txn.clientIP)
+    # ~~ End HAProxy client IP tracking ~~
+
+    # Capture hockeypuck backend stats.
+    http-request set-var(txn.hockeypuck_primary) nbsrv(be_keyserver_primary)
+    http-request set-var(txn.hockeypuck)         nbsrv(be_keyserver)
+    http-request capture var(txn.hockeypuck_primary) len 2
+    http-request capture var(txn.hockeypuck)         len 2
 
     # Generic health monitor for umbrella LBs in enterprise deployments.
     acl BACKEND_DEAD nbsrv(be_keyserver) lt 1
@@ -216,25 +258,19 @@ frontend fe_http_handler
     monitor fail if BACKEND_DEAD
 
     # Store Host header to construct Via response for keyserver backend
-    http-request set-var(txn.serverName) req.hdr(host) if keyserver_host
+    http-request set-var(txn.serverName) req.hdr(host) if is_host_set
 
     # TARPIT the new connection if the client already has 80 opened
-    http-request tarpit if { src_conn_cur(st_global_ddos) ge 80 } !is_tor_exit_relay
+    http-request tarpit if { src_conn_cur(st_global_ddos) ge 80 }
 
     # TARPIT the new connection if the client has opened more than 40 connections in 3 seconds
-    http-request tarpit if { src_conn_rate(st_global_ddos) ge 40 } !is_tor_exit_relay
+    http-request tarpit if { src_conn_rate(st_global_ddos) ge 40 }
 
     # TARPIT the connection if the client has passed the HTTP error rate (10s)
-    http-request tarpit if { sc0_http_err_rate(st_global_ddos) gt 20 } !is_tor_exit_relay
+    http-request tarpit if { sc0_http_err_rate(st_global_ddos) gt 20 }
 
     # TARPIT the connection if the client has passed the HTTP request rate (10s)
-    http-request tarpit if { sc0_http_req_rate(st_global_ddos) gt 100 } !is_tor_exit_relay
-
-    # For country blocking and blacklists, if no CF-Connecting-IP is present, use the last value of X-Forwarded-For
-    # and set the CF-Connecting-IP header to it
-    acl HAS_CF_CONNECTING_IP req.fhdr(CF-Connecting-IP) -m found
-    http-request set-header CF-Connecting-IP %[req.hdr_ip(X-Forwarded-For,-1)] if !HAS_CF_CONNECTING_IP HAS_X_FORWARDED_FOR
-    http-request set-header CF-Connecting-IP src if !HAS_CF_CONNECTING_IP !HAS_X_FORWARDED_FOR
+    http-request tarpit if { sc0_http_req_rate(st_global_ddos) gt 100 }
 
     # Whitelisting options
     http-request allow if { req.hdr_ip(CF-Connecting-IP,-1) -f ${HAP_CONF_DIR}/lists/whitelist.list }
@@ -251,14 +287,14 @@ frontend fe_http_handler
     # Check if the IP is already banned
     acl tor_ip_24h_banned      sc2_get_gpc0(st_tor_24h_ban) gt 0
     acl tor_ip_1month_banned   sc2_get_gpc0(st_tor_1month_ban) gt 0
-    
+
     # Block requests if the IP is on the 24h ban list or 1-month ban list
     http-request deny deny_status 429 hdr Denial-Reason "This Tor exit relay was used in DDoS attack on this service. Do not make any further requests. This will olny make things worse." if is_tor_exit_relay tor_ip_24h_banned
     http-request deny deny_status 429 hdr Denial-Reason "This Tor exit relay is a repeat offender used in DDoS attack on this service. Hard ban enforced" if is_tor_exit_relay tor_ip_1month_banned
 
     # Increment the gpc0 counter in the 1-month ban stick table if the IP attempts another request within the 24h or 1-month ban period
-    http-request track-sc2 hdr_ip(CF-Connecting-IP,-1) table st_tor_1month_ban if is_tor_exit_relay tor_ip_24h_banned
-    http-request track-sc2 hdr_ip(CF-Connecting-IP,-1) table st_tor_1month_ban if is_tor_exit_relay tor_ip_1month_banned
+    http-request track-sc2 var(txn.clientIP) table st_tor_1month_ban if is_tor_exit_relay tor_ip_24h_banned
+    http-request track-sc2 var(txn.clientIP) table st_tor_1month_ban if is_tor_exit_relay tor_ip_1month_banned
 
     # Block requests if either the connection rate or request rate limits are exceeded
     # Increment the gpc0 counter in the 24h ban stick table if the request is blocked
@@ -274,9 +310,9 @@ frontend fe_http_handler
 
     # Block requests if the request was rate limited and increment the gpc0 counter in the 24h ban stick table
     http-request deny deny_status 429 hdr Denial-Reason "Exceeded rate limit. You had: %[sc1_conn_cur(st_tor_request_rate)] established connections, %[sc1_conn_rate(st_tor_request_rate)] connection rate and %[sc1_http_req_rate(st_tor_request_rate)] requests." if tor_request_rate_limited
-    http-request track-sc2 hdr_ip(CF-Connecting-IP,-1) table st_tor_24h_ban if tor_request_rate_limited
+    http-request track-sc2 var(txn.clientIP) table st_tor_24h_ban if tor_request_rate_limited
     # ~ End of Tor exit relay nodes rules ~
-    
+
     # Options
     option httplog
     option http-server-close
@@ -288,7 +324,7 @@ frontend fe_http_handler
     # X-Forward- settings
     http-request    set-header X-Forwarded-Proto http  if !{ ssl_fc }
     http-request    set-header X-Forwarded-Proto https if { ssl_fc }
-    http-request    set-header X-Forwarded-Host  %[req.hdr(host)]
+    http-request    set-header X-Forwarded-Host  %[req.hdr(host)] if is_host_set
 
     # HSTS response header
     http-response   set-header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" if { ssl_fc }
@@ -297,23 +333,23 @@ frontend fe_http_handler
     http-response   replace-header Set-Cookie ^((?:.(?!\ [Ss]ecure))*)$ \1;\ Secure if { ssl_fc }
 
     # # Backend routing
-    use_backend be_acme_challenge  if acme_challenge
-    use_backend be_prometheus      if get_prometheus
+    use_backend be_acme_challenge  if acme_challenge !stopping
+    use_backend be_prometheus      if get_prometheus !stopping
 
     # Fetch stats from the primary Hockeypuck instance
-    use_backend be_keyserver_primary if keyserver_host get_pks_lookup pks_stats_query METH_GET
+    use_backend be_keyserver_primary if keyserver_host get_pks_lookup pks_stats_query  !stopping METH_GET
     # Fetch recon hash queries from the primary Hockeypuck instance
-    use_backend be_keyserver_primary if post_pks_hashquery METH_POST
+    use_backend be_keyserver_primary if post_pks_hashquery  !stopping METH_POST
     # Use cluster backend for all other requests
-    use_backend be_keyserver         if keyserver_host get_pks_lookup METH_GET
-    use_backend be_keyserver         if keyserver_host post_pks_delete METH_POST
-    use_backend be_keyserver         if keyserver_host post_pks_replace METH_POST
+    use_backend be_keyserver         if keyserver_host get_pks_lookup  !stopping METH_GET
+    use_backend be_keyserver         if keyserver_host post_pks_delete !stopping METH_POST
+    use_backend be_keyserver         if keyserver_host post_pks_replace !stopping METH_POST
     # Allow POST /pks/add requests from all IPs to the primary Hockeypuck instance
-    use_backend be_keyserver_primary if keyserver_host post_pks_add METH_POST
+    use_backend be_keyserver_primary if keyserver_host post_pks_add !stopping METH_POST
     # Completely block POST /pks/add requests from Tor exit nodes
     #use_backend be_keyserver_primary if keyserver_host post_pks_add !is_tor_exit_relay METH_POST
     #use_backend be_tarpit            if keyserver_host post_pks_add is_tor_exit_relay METH_POST
-    use_backend be_keyserver         if keyserver_host get_webroot !post_pks_add !post_pks_hashquery !post_pks_delete !post_pks_replace METH_GET
+    use_backend be_keyserver         if keyserver_host get_webroot !post_pks_add !post_pks_hashquery !post_pks_delete !post_pks_replace !stopping METH_GET
 
     default_backend be_tarpit
 
@@ -348,7 +384,7 @@ backend be_acme_challenge
 # Backend to tarpit connections
 backend be_tarpit
     mode http
-    
+
     stick-table type ip size 1m expire 1m store conn_cur,conn_rate(10s),http_req_rate(10s)
 
     http-request silent-drop if { src_conn_cur gt 10 }
