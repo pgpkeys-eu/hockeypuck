@@ -57,6 +57,9 @@ HAP_CONF_DIR=/usr/local/etc/haproxy
 HAP_CACHE_DIR=/var/cache/haproxy
 HAP_CERT_DIR=/etc/letsencrypt/live
 
+# Remote URL for fetching tor exit relays list
+TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
+
 # MIGRATION_HAPROXY_DONE (DO NOT REMOVE THIS LINE!)
 EOF
 
