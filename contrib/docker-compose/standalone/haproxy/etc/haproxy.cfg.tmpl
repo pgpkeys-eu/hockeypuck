@@ -20,9 +20,7 @@
 #                       e.g. for letsencrypt this will be `/etc/letsencrypt/live`
 # HAP_DHPARAM_FILE      Diffie-Hellman parameters for SSL/TLS
 
-# Note that after the cache files or the SSL certs are updated externally, haproxy should be soft reloaded using e.g.:
-#
-#   haproxy -f ${HAP_CONF_DIR}/haproxy.cfg -p /run/haproxy.pid -sf $$(cat /run/haproxy.pid) -x ${HAP_CACHE_DIR}/haproxy.admin.sock
+# Note that after the cache files or the SSL certs are updated externally, haproxy should be soft reloaded by sending it a HUP signal
 
 global
     # Map threads to individual CPU cores
@@ -62,6 +60,9 @@ global
     # Allow local admin socket
     stats socket ${HAP_CACHE_DIR}/haproxy.admin.sock mode 660 level admin expose-fd listeners
     stats timeout 30s
+
+    # Perform stateless reloads on HUP
+    master-worker
 
     server-state-file ${HAP_CACHE_DIR}/server-state
 
@@ -193,9 +194,6 @@ frontend fe_http_handler
     acl get_webroot            path_beg      /
 
     # Tor exit nodes
-    # These should be refreshed on a schedule using an external script.
-    # After updating, haproxy should be refreshed using the graceful method described at
-    # https://www.haproxy.com/blog/hitless-reloads-with-haproxy-howto/
     acl is_tor_exit_relay   src -f ${HAP_CACHE_DIR}/tor_exit_relays.list
 
     # .well-known/security.txt settings

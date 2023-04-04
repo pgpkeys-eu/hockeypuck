@@ -47,11 +47,11 @@ services:
     - certbot
     - prometheus
     volumes:
-    - ./haproxy/etc/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
-    - ./haproxy/etc/lists:/usr/local/etc/haproxy/lists
-    - haproxy_cache:/var/cache/haproxy
+    - ./haproxy/etc/haproxy.cfg:${HAP_CONF_DIR}/haproxy.cfg
+    - ./haproxy/etc/lists:${HAP_CONF_DIR}/lists
+    - haproxy_cache:${HAP_CACHE_DIR}
     - certbot_conf:/etc/letsencrypt
-    entrypoint: "/bin/sh -c 'touch /var/cache/haproxy/server-state /var/cache/haproxy/tor_exit_relays.list; haproxy -f /usr/local/etc/haproxy/haproxy.cfg -p /run/haproxy.pid & trap exit TERM; while :; do sleep 1800; haproxy -f /usr/local/etc/haproxy/haproxy.cfg -p /run/haproxy.pid -sf $$(cat /run/haproxy.pid) -x /var/cache/haproxy/haproxy.admin.sock; done'"
+    entrypoint: "/bin/sh -c 'haproxy -f /usr/local/etc/haproxy/haproxy.cfg -p /run/haproxy.pid & trap exit TERM; while :; do sleep 1800; kill -HUP 7; done'"
     logging:
       options:
         max-size: "10m"
@@ -64,7 +64,7 @@ services:
     - haproxy
     volumes:
     - haproxy_cache:/var/cache/haproxy
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 1800; wget \"https://www.dan.me.uk/torlist/?exit\" -O /var/cache/haproxy/tor_exit_relays.list; done'"
+    entrypoint: "/bin/sh -c 'trap exit TERM; touch /var/cache/haproxy/tor_exit_relays.list; while :; do sleep 1800; wget \"https://www.dan.me.uk/torlist/?exit\" -O /var/cache/haproxy/tor_exit_relays.list; done'"
     logging:
       options:
         max-size: "10m"
