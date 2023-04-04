@@ -15,16 +15,16 @@ Tested on Ubuntu 20.04 and Debian 11 (bullseye), with dependencies installed usi
 Other platforms may work but will require some customization.
 At minimum, docker and docker-compose (v1.5 or later) must be installed in advance.
 
-# Migration of existing deployments (!BREAKING CHANGES!)
+# Migration of legacy nginx deployments (!BREAKING CHANGES!)
 
-If you have already created a standalone deployment using nginx (March 2023 or earlier) you will need to migrate from nginx to haproxy.
+If you created a standalone deployment before April 2023, you will need to migrate from nginx to haproxy.
 
 * `cd` into this directory
-* BACK UP EVERYTHING by incanting `cp -a . /path/to/somewhere/safe/`
+* BACK UP ALL CONFIG FILES by incanting `cp -a . /path/to/somewhere/safe/`
 * Incant `./mksite.bash` to apply the migrations to your configuration settings
 * Incant `./mkconfig.bash` to create the haproxy configuration files
 
-If you have made changes to the default nginx configuration, you will need to port these changes to haproxy.
+If you have made local changes to the default nginx configuration, you will need to port these changes to haproxy.
 Please open a ticket in the hockeypuck github project if you require assistance.
 
 * Incant `docker-compose down` to free up listening ports
@@ -61,21 +61,41 @@ Once this is working, you can remove your nginx configuration by deleting the `n
 * HAProxy configuration: `haproxy/etc/haproxy.conf`
 * Prometheus configuration: `prometheus/etc/prometheus.yml`
 
-To reload services after changing the configuration, incant `docker-compose restart`.
+To reload all services after changing the configuration, incant `docker-compose restart`.
+
+To gracefully reload HAProxy without downtime, incant `docker-compose kill -s HUP haproxy`.
 
 # Upgrading
 
-To upgrade hockeypuck to the latest commit, incant:
+## Hockeypuck
+
+To upgrade the hockeypuck container to the latest commit, incant:
 
 ```
 git pull
 docker-compose build
-docker-compose down
+docker-compose stop hockeypuck
 docker-compose up -d
 ```
 
 This will leave behind stale intermediate images, which may be quite large.
 To clean them up, incant `docker images -f 'label=io.hockeypuck.temp=true' -q | xargs docker rmi`.
+
+## HAProxy
+
+The HAProxy template configuration is volatile and may change significantly between releases.
+To update your configuration with changes from from upstream, incant the following:
+
+```
+git pull
+mv haproxy/etc/haproxy.cfg{,.bak}
+./mkconfig.bash
+docker-compose kill -s HUP haproxy
+docker-compose restart haproxy_cache
+```
+
+It is recommended that you make any local configuration changes to `haproxy/etc/haproxy.cnf.tmpl` and maintain them in a local branch (or fork).
+This will allow you to more sustainably manage merge conflicts with upstream.
 
 # Operation
 
@@ -83,7 +103,7 @@ To clean them up, incant `docker images -f 'label=io.hockeypuck.temp=true' -q | 
 
 By default the prometheus monitoring console is not accessible from external IP addresses.
 To change this, edit `haproxy/etc/haproxy.cfg` as appropriate.
-Once done, browse to `https://FQDN/monitoring/prometheus` to access the monitoring console.
+Once done, browse to `https://$FQDN/monitoring/prometheus` to access the monitoring console.
 
 ## Obtaining a new keyserver dump
 
