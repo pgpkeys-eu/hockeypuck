@@ -30,15 +30,15 @@ EOF
 }
 
 s_userid_regex() {
-    $SQLCMD -t <<<"select reverse(rfingerprint), keywords from keys where doc->'userIDs'->0->>'keywords' ~ '$1';"
+    $SQLCMD -t -c "select reverse(rfingerprint), keywords from keys where doc->'userIDs'->0->>'keywords' ~ '$1';"
 }
 
 s_keywords_tsquery() {
-    $SQLCMD -t <<<"select reverse(rfingerprint), keywords from keys, to_tsquery($1) query where query @@ keywords;"
+    $SQLCMD -t -c "select reverse(rfingerprint), keywords from keys, to_tsquery($1) query where query @@ keywords;"
 }
 
 s_keywords_websearch() {
-    $SQLCMD -t <<<"select reverse(rfingerprint), keywords from keys, websearch_to_tsquery('$1') query where query @@ keywords;"
+    $SQLCMD -t -c "select reverse(rfingerprint), keywords from keys, websearch_to_tsquery('$1') query where query @@ keywords;"
 }
 
 [[ ${1:-} ]] || usage
