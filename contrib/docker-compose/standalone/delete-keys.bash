@@ -51,7 +51,9 @@ if [[ $1 == "-f" ]]; then
   $SQLCMD -c '\copy bad_fps from stdin csv' < "$2"
   $SQLCMD -c '
     delete from subkeys k using bad_fps b where k.rfingerprint = reverse(b.fingerprint);
+    alter table subkeys drop constraint subkeys_rfingerprint_fkey;
     delete from    keys k using bad_fps b where k.rfingerprint = reverse(b.fingerprint);
+    alter table subkeys add foreign key (rfingerprint) references keys(rfingerprint);
     drop table bad_fps;
   '
 else
