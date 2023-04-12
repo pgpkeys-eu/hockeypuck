@@ -91,7 +91,7 @@ services:
     restart: always
     volumes:
     - certbot_conf:/etc/letsencrypt
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot --standalone renew; for i in /etc/letsencrypt/live/*; do ln -sf privkey.pem $$i/fullchain.pem.key; done; sleep 12h & wait $${!}; done;'"
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do for i in /etc/letsencrypt/live/*; do [ -d \"$$i\" ] && ln -sf privkey.pem $$i/fullchain.pem.key; certbot --standalone renew; done; sleep 12h & wait $${!}; done;'"
 
 volumes:
   hkp_data: {}

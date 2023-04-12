@@ -48,8 +48,8 @@ done
 if [[ ${ALIAS_FQDNS:-} ]]; then
 	cat <<EOF
 WARNING: you have ALIAS_FQDNS set, but this script cannot yet configure them in haproxy
-You MUST edit haproxy/etc/haproxy.conf to add them one per line, near the following:
+You MUST edit haproxy/etc/haproxy.cfg to add them one per line, near the following:
 
 EOF
-	grep -nC2 ALIAS_FQDN "$HERE/haproxy/etc/haproxy.conf" || true
+	grep -nC2 ALIAS_FQDN "$HERE/haproxy/etc/haproxy.cfg" || true
 fi

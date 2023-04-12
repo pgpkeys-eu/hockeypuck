@@ -27,11 +27,8 @@ If you created a standalone deployment before April 2023, you will need to migra
 If you have made local changes to the default nginx configuration, you will need to port these changes to haproxy.
 Please open a ticket in the hockeypuck github project if you require assistance.
 
-* Incant `docker-compose down` to free up listening ports
-* Incant `docker rm --force standalone_nginx_1` to fully remove nginx
-* Incant `docker-compose up -d` to bring up the new deployment
-
-Once this is working, you can remove your nginx configuration by deleting the `nginx` subdirectory.
+* Incant `docker-compose down --remove-orphans && docker-compose up -d` to bring up the new deployment
+* You can now remove your nginx configuration by deleting the `nginx` subdirectory.
 
 # Installation
 
