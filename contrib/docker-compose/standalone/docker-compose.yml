@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
   hockeypuck:
     image: hockeypuck/hockeypuck:${RELEASE}
@@ -41,6 +41,7 @@ services:
     - "80:80"
     - "443:443"
     - "11371:11371"
+    - "${HAP_PEER_LISTEN_IP:-127.0.0.1}:1395:1395"
     user: root
     restart: always
     depends_on:
