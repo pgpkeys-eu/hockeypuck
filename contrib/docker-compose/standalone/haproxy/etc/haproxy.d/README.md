@@ -1,11 +1,12 @@
 # Sample haproxy configuration for keyservers
 # (c) Martin Dobrev, Andrew Gallagher 2023
 
+# Supply this directory to `haproxy` using the `-f DIRECTORY` command-line option.
 # The files in this directory are optimised for hockeypuck's `docker-compose/standalone` deployment.
 
-# You MUST rename the two `*LOCAL*.cfg.tmpl` files by copying them to the corresponding `*.cfg`.
+# You MUST copy the two `*LOCAL*.cfg.tmpl` files to the corresponding `*LOCAL*.cfg` file before use.
 # Hockeypuck's `docker-compose/standalone/mkconfig.bash` script will do this automatically.
-# (see `docker-compose/standalone/README.md` for full instructions).
+# (see `docker-compose/standalone/README.md` for full instructions)
 # This allows you to edit the `*LOCAL*.cfg` files without introducing git merge conflicts.
 
 # To facilitate portability, these files have been parameterised using envar substitution, i.e. "${...}"
