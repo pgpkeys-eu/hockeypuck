@@ -4,11 +4,12 @@
 
 set -euo pipefail
 
-# Uncomment and edit one of the below for your postgres installation
-# for docker-compose/standalone default configuration
-SQLCMD="docker exec -i standalone_postgres_1 psql hkp -U hkp"
-# for docker-compose/dev default configuration
-#SQLCMD="docker exec -i hockeypuck_postgres_1 psql hkp -U docker"
+cd "$(dirname "$0")"
+[ ! -f ".env" ] || . .env
+
+# SQL command for docker-compose/standalone default configuration.
+# If using this script elsewhere, you will need to customise the below.
+SQLCMD="docker-compose exec postgres psql hkp -U ${POSTGRES_USER}"
 # for non-docker postgres, e.g.
 #SQLCMD="psql hkp -U hkp"
 
