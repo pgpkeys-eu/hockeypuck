@@ -241,7 +241,7 @@ frontend fe_http_handler
 
     # Set CF-Connecting-IP header to the tracked client IP. All subsequent requests from this client will have this header set.
     # And all ACL rules in backends etc. must be evaluated against this header.
-    http-request set-header CF-Connecting-IP var(txn.clientIP)
+    http-request set-header CF-Connecting-IP %[var(txn.clientIP)]
     # ~~ End HAProxy client IP tracking ~~
 
     # Capture hockeypuck backend stats.
