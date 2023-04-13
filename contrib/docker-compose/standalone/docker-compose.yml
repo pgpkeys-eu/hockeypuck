@@ -5,7 +5,7 @@ services:
     build:
       context: ../../..
     ports:
-    - "11370:11370"
+    - "${HKP_RECON_HOST_PORT:-11370}:11370"
     restart: always
     depends_on:
     - postgres
@@ -38,10 +38,10 @@ services:
   haproxy:
     image: haproxy:2.6-alpine
     ports:
-    - "80:80"
-    - "443:443"
-    - "11371:11371"
-    - "${HAP_PEER_LISTEN_IP:-127.0.0.1}:1395:1395"
+    - "${HAP_HTTP_HOST_PORT:-80}:80"
+    - "${HAP_HTTPS_HOST_PORT:-443}:443"
+    - "${HAP_HKP_HOST_PORT:-11371}:11371"
+    - "${HAP_PEER_HOST_PORT:-127.0.0.1:1395}:1395"
     user: root
     restart: always
     depends_on:
