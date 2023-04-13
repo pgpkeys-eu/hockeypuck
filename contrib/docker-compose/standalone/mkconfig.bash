@@ -33,7 +33,9 @@ fi
 
 # Populate the LOCAL portions of the HAProxy configuration
 for template in "$HERE"/haproxy/etc/haproxy.d/*LOCAL*.cfg.tmpl; do
-	mv "$template" "$(basename "$template" .tmpl)"
+	config="$HERE/haproxy/etc/haproxy.d/$(basename "$template" .tmpl)"
+	[ ! -f "$config" ] &&
+		cp "$template" "$config"
 done
 
 # Make sure that black/whitelists exist, even if empty
