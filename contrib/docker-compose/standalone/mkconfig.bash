@@ -38,10 +38,11 @@ for template in "$HERE"/haproxy/etc/haproxy.d/*LOCAL*.cfg.tmpl; do
 		cp "$template" "$config"
 done
 
+[ ! -d "$HERE/haproxy/etc/lists" ] &&
+	mkdir "$HERE/haproxy/etc/lists"
+
 # Make sure that black/whitelists exist, even if empty
 for file in blacklist whitelist; do
-	[ ! -d "$HERE/haproxy/etc/lists" ] &&
-		mkdir "$HERE/haproxy/etc/lists"
 	[ ! -f "$HERE/haproxy/etc/lists/$file.list" ] &&
 		touch "$HERE/haproxy/etc/lists/$file.list"
 done
