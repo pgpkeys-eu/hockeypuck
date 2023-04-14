@@ -60,6 +60,20 @@ HAP_CERT_DIR=/etc/letsencrypt/live
 # Remote URL for fetching tor exit relays list
 TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
 
+# Advanced HAProxy configuration options
+
+# Set this to the host:port that your HAProxy peers will see
+#HAP_PEER_HOST_PORT=127.0.0.1:1395
+
+# Set these to "port" or "host:port" to override the listening hostip/port(s)
+#HAP_HTTP_HOST_PORT=80
+#HAP_HTTPS_HOST_PORT=443
+#HAP_HKP_HOST_PORT=11371
+
+# Set this to e.g. /etc/letsencrypt in order to share certificates with the host.
+# Note that the certbot container is responsible for renewing these.
+#CERTBOT_CONF=certbot_conf
+
 # MIGRATION_HAPROXY_DONE (DO NOT REMOVE THIS LINE!)
 EOF
 
