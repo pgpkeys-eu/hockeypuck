@@ -70,6 +70,14 @@ TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
 #HAP_HTTPS_HOST_PORT=443
 #HAP_HKP_HOST_PORT=11371
 
+# Uncomment *at most one* of the BEHIND settings to trust an upstream proxy's request headers.
+# This is vital so that rate limiting applies to the client's real IP and not the proxy's.
+#
+# Trust CF-Connecting-IP: headers
+#HAP_BEHIND_CLOUDFLARE=true
+# Trust X-Forwarded-For: headers
+#HAP_BEHIND_PROXY=true
+
 # Set this to e.g. /etc/letsencrypt in order to share certificates with the host.
 # Note that the certbot container is responsible for renewing these.
 #CERTBOT_CONF=certbot_conf
