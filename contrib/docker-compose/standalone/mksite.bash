@@ -64,6 +64,8 @@ TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
 
 # Set this to the host:port that your HAProxy peers will see
 #HAP_PEER_HOST_PORT=127.0.0.1:1395
+# Set the HAProxy log format
+HAP_LOG_FORMAT="%ci:%cp [%t] %ft %b/%s %Tq/%Tw/%Tc/%Tr/%Tt %ST %U/%B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
 
 # Set these to "port" or "host:port" to override the listening hostip/port(s)
 #HAP_HTTP_HOST_PORT=80
