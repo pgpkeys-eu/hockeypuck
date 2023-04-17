@@ -80,6 +80,11 @@ HAP_LOG_FORMAT="%ci:%cp [%t] %ft %b/%s %Tq/%Tw/%Tc/%Tr/%Tt %ST %U/%B %CC %CS %ts
 # Trust X-Forwarded-For: headers
 #HAP_BEHIND_PROXY=true
 
+# Set to any value to disable the service
+#HAP_DISABLE_SSL=true
+#HAP_DISABLE_CERTBOT=true
+#HAP_DISABLE_PROMETHEUS=true
+
 # Set this to e.g. /etc/letsencrypt in order to share certificates with the host.
 # Note that the certbot container is responsible for renewing these.
 #CERTBOT_CONF=certbot_conf
