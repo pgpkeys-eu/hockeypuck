@@ -64,6 +64,8 @@ TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
 
 # Set this to the host:port that your HAProxy peers will see
 #HAP_PEER_HOST_PORT=127.0.0.1:1395
+# Set the HAProxy log format
+HAP_LOG_FORMAT="%ci:%cp [%t] %ft %b/%s %Tq/%Tw/%Tc/%Tr/%Tt %ST %U/%B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
 
 # Every name and alias of your other cluster members, space-separated
 # Note that their IPs should also be added to ./haproxy/etc/lists/whitelist.list
@@ -81,6 +83,11 @@ CLUSTER_FQDNS=""
 #HAP_BEHIND_CLOUDFLARE=true
 # Trust X-Forwarded-For: headers
 #HAP_BEHIND_PROXY=true
+
+# Set to any value to disable the service
+#HAP_DISABLE_SSL=true
+#HAP_DISABLE_CERTBOT=true
+#HAP_DISABLE_PROMETHEUS=true
 
 # Set this to e.g. /etc/letsencrypt in order to share certificates with the host.
 # Note that the certbot container is responsible for renewing these.
