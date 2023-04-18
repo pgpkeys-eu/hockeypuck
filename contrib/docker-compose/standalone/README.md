@@ -124,7 +124,7 @@ If you have more than one `docker-compose/standalone` stack, you can cluster the
    ```
    peer "${HOSTNAME}"      "${HOST_IP}":1395
    ```
-* Make sure that your firewall allows 
+* Make sure that your firewall allows connectivity in from all cluster peers on ports 11371 and 1395
 
 ### HAProxy shim
 
