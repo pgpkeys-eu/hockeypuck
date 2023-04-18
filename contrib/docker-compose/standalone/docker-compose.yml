@@ -53,6 +53,7 @@ services:
     - HAP_CACHE_DIR
     - HAP_CERT_DIR
     - HAP_DHPARAM_FILE
+    - HAP_LOG_FORMAT
     - HAP_BEHIND_CLOUDFLARE
     - HAP_BEHIND_PROXY
     depends_on:
