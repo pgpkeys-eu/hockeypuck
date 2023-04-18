@@ -64,9 +64,6 @@ TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
 
 # Set this to the host:port that your HAProxy peers will see
 #HAP_PEER_HOST_PORT=127.0.0.1:1395
-# Set the HAProxy log format
-HAP_LOG_FORMAT="%ci:%cp [%t] %ft %b/%s %Tq/%Tw/%Tc/%Tr/%Tt %ST %U/%B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
-
 # Every name and alias of your other cluster members, space-separated
 # Note that their IPs should also be added to ./haproxy/etc/lists/whitelist.list
 CLUSTER_FQDNS=""
@@ -94,6 +91,17 @@ CLUSTER_FQDNS=""
 #CERTBOT_CONF=certbot_conf
 
 # MIGRATION_HAPROXY_DONE (DO NOT REMOVE THIS LINE!)
+EOF
+
+if ! grep -q MIGRATION_HAPROXY_LOGFORMAT_DONE "$HERE/.env"; then
+# Migration 1a: new haproxy configuration (additional)
+
+cat >>"$HERE/.env" <<EOF
+
+# Set the HAProxy log format
+HAP_LOG_FORMAT="%ci:%cp [%t] %ft %b/%s %Tq/%Tw/%Tc/%Tr/%Tt %ST %U/%B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
+
+# MIGRATION_HAPROXY_LOGFORMAT_DONE (DO NOT REMOVE THIS LINE!)
 EOF
 
 fi
