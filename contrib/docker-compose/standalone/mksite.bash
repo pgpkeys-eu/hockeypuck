@@ -93,6 +93,8 @@ CLUSTER_FQDNS=""
 # MIGRATION_HAPROXY_DONE (DO NOT REMOVE THIS LINE!)
 EOF
 
+fi
+
 if ! grep -q MIGRATION_HAPROXY_LOGFORMAT_DONE "$HERE/.env"; then
 # Migration 1a: new haproxy configuration (additional)
 
