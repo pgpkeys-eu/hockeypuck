@@ -134,7 +134,7 @@ For guidelines, please see `README_SHIM.md` in this directory.
 ## Monitoring
 
 By default the prometheus monitoring console is not accessible from external IP addresses.
-To change this, edit `haproxy/etc/haproxy.cfg` as appropriate.
+Add your permitted IPs to `haproxy/etc/lists/prometheus_whilelist.list` in CIDR format.
 Once done, browse to `https://$FQDN/monitoring/prometheus` to access the monitoring console.
 
 ## Obtaining a new keyserver dump
