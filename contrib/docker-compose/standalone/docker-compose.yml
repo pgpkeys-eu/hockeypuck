@@ -85,7 +85,6 @@ services:
     user: root
     restart: always
     volumes:
-    - ./haproxy-internal-entrypoint.sh:/usr/local/bin/haproxy-entrypoint.sh
     - ./haproxy/etc/haproxy-internal.cfg:/usr/local/etc/haproxy/haproxy.cfg
     entrypoint: "/bin/sh -c 'export HOSTNAME=$$(hostname); export HOST_IP=$$(hostname -i); haproxy -f /usr/local/etc/haproxy/haproxy.cfg'"
     logging:
