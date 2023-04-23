@@ -45,17 +45,6 @@ cat >>"$HERE/.env" <<EOF
 
 # Parameterised default values for haproxy config
 
-# Hosts and ports
-PROMETHEUS_HOST_PORT=prometheus:9090
-CERTBOT_HOST_PORT=certbot:80
-KEYSERVER_HOST_PORT=hockeypuck:11371
-
-# Paths and files
-HAP_DHPARAM_FILE=/etc/letsencrypt/ssl-dhparams.pem
-HAP_CONF_DIR=/usr/local/etc/haproxy
-HAP_CACHE_DIR=/var/cache/haproxy
-HAP_CERT_DIR=/etc/letsencrypt/live
-
 # Remote URL for fetching tor exit relays list
 TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
 
@@ -90,7 +79,7 @@ EOF
 fi
 
 if ! grep -q MIGRATION_HAPROXY_LOGFORMAT_DONE "$HERE/.env"; then
-# Migration 1a: new haproxy configuration (additional)
+# Migration 2: new haproxy configuration (additional)
 
 cat >>"$HERE/.env" <<EOF
 
@@ -100,6 +89,14 @@ HAP_LOG_FORMAT="%ci:%cp [%t] %ft %b/%s %Tq/%Tw/%Tc/%Tr/%Tt %ST %U/%B %CC %CS %ts
 # MIGRATION_HAPROXY_LOGFORMAT_DONE (DO NOT REMOVE THIS LINE!)
 EOF
 
+fi
+
+if ! grep -q MIGRATION_3_DONE "$HERE/.env"; then
+# Migration 3: revert haproxy configuration (redundant envars)
+
+sed -E -i -e '/^(PROMETHEUS_HOST_PORT|CERTBOT_HOST_PORT|KEYSERVER_HOST_PORT|HAP_DHPARAM_FILE|HAP_CONF_DIR|HAP_CACHE_DIR|HAP_CERT_DIR|# Hosts and ports|# Paths and files|# You should only change these)/ d' "$HERE/.env"
+
+echo "# MIGRATION_3_DONE (DO NOT REMOVE THIS LINE!)" >> "$HERE/.env"
 fi
 
 chmod 600 "$HERE/.env"
