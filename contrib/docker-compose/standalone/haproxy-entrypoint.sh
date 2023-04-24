@@ -20,6 +20,12 @@ for file in blacklist whitelist prometheus_whitelist; do
     touch "${HAP_CONF_DIR}/lists/$file.list"
 done
 
+# Strip enclosing quotes, as docker-compose does not parse shell metachars in .env
+ALIAS_FQDNS="${ALIAS_FQDNS%\"}"
+ALIAS_FQDNS="${ALIAS_FQDNS#\"}"
+CLUSTER_FQDNS="${CLUSTER_FQDNS%\"}"
+CLUSTER_FQDNS="${CLUSTER_FQDNS#\"}"
+
 # And populate the aliases map
 for alias in ${ALIAS_FQDNS:-} ${CLUSTER_FQDNS:-}; do
   echo "$alias $FQDN"
