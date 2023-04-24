@@ -44,12 +44,6 @@ Note that `KEYSERVER_HOST_PORT` is resolved inside the docker container, so `loc
 If you are running the keyserver on the same machine as the reverse proxy, you should use the docker host IP here,
 e.g. `172.17.0.1:11371`, and make sure that your host iptables allows for incoming connections on the `docker0` interface.
 
-5. Generate the HAProxy configuration files:
-
-```
-./mkconfig.bash
-```
-
 At this point, haproxy is configured to talk to your keyserver back end, but to listen only on some unused localhost ports.
 In this configuration it should not clash with anything you already have running on that machine.
 
