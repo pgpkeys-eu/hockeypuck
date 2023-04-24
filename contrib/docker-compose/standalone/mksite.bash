@@ -45,6 +45,9 @@ cat >>"$HERE/.env" <<EOF
 
 # Parameterised default values for haproxy config
 
+# The following is only required in shim mode
+#KEYSERVER_HOST_PORT=hockeypuck:11371
+
 # Remote URL for fetching tor exit relays list
 TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
 
@@ -94,7 +97,7 @@ fi
 if ! grep -q MIGRATION_3_DONE "$HERE/.env"; then
 # Migration 3: revert haproxy configuration (redundant envars)
 
-sed -E -i -e '/^(PROMETHEUS_HOST_PORT|CERTBOT_HOST_PORT|KEYSERVER_HOST_PORT|HAP_DHPARAM_FILE|HAP_CONF_DIR|HAP_CACHE_DIR|HAP_CERT_DIR|# Hosts and ports|# Paths and files|# You should only change these)/ d' "$HERE/.env"
+sed -E -i -e '/^(PROMETHEUS_HOST_PORT|CERTBOT_HOST_PORT|HAP_DHPARAM_FILE|HAP_CONF_DIR|HAP_CACHE_DIR|HAP_CERT_DIR|# Hosts and ports|# Paths and files|# You should only change these)/ d' "$HERE/.env"
 
 echo "# MIGRATION_3_DONE (DO NOT REMOVE THIS LINE!)" >> "$HERE/.env"
 fi
