@@ -47,6 +47,17 @@ e.g. `172.17.0.1:11371`, and make sure that your host iptables allows for incomi
 At this point, haproxy is configured to talk to your keyserver back end, but to listen only on some unused localhost ports.
 In this configuration it should not clash with anything you already have running on that machine.
 
+## BEWARE
+
+Docker-compose before v1.29 does not parse quoted values like a POSIX shell would.
+This means that normally you should not quote values in `.env`,
+as docker-compose's old behaviour is highly unintuitive.
+
+The scripts in this directory try to compensate, and can parse *double* quotes around 
+ALIAS_FQDNS, CLUSTER_FQDNS, and HKP_LOG_FORMAT values *only*,
+as these values will normally contain whitespace and so most users will instinctively quote them anyway.
+
+In all other cases, enclosing quotes MUST NOT be used.
 
 # Testing and operation
 

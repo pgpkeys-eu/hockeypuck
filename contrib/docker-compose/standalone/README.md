@@ -36,9 +36,9 @@ Please open a ticket in the hockeypuck github project if you require assistance.
 * Configure your ingress firewall to allow ports: 80, 443, 11370, 11371
 * Create a `.env` file by running `./mksite.bash`.
 * Customize the settings in `.env` to your liking.
-   Set EMAIL and FINGERPRINT to the contact email and associated PGP fingerprint of the site admin.
-   Set FQDN and (optionally) ALIAS_FQDNS to the primary (and other) DNS name(s) of your server.
-   (Optional) Set ACME_SERVER to your internal CA if not using Let's Encrypt.
+   * Set EMAIL and FINGERPRINT to the contact email and associated PGP fingerprint of the site admin.
+   * Set FQDN and (optionally) ALIAS_FQDNS to the primary (and other) DNS name(s) of your server.
+   * (Optional) Set ACME_SERVER to your internal CA if not using Let's Encrypt.
 * Generate Hockeypuck and HAProxy configuration from your site settings with
    `./mkconfig.bash`.
 * Build hockeypuck by incanting `docker-compose build`.
@@ -51,6 +51,18 @@ Please open a ticket in the hockeypuck github project if you require assistance.
    You can keep track of progress by running `docker-compose logs -f hockeypuck`.
 * Once you are sure Hockeypuck has loaded all keys, you can run
    `./clean-sks-dump.bash` to remove the dump files and recover disk space.
+
+## BEWARE
+
+Docker-compose before v1.29 does not parse quoted values like a POSIX shell would.
+This means that normally you should not quote values in `.env`,
+as docker-compose's old behaviour is highly unintuitive.
+
+The scripts in this directory try to compensate, and can parse *double* quotes around 
+ALIAS_FQDNS, CLUSTER_FQDNS, and HKP_LOG_FORMAT values *only*,
+as these values will normally contain whitespace and so most users will instinctively quote them anyway.
+
+In all other cases, enclosing quotes MUST NOT be used.
 
 # Configuration
 

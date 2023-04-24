@@ -20,7 +20,8 @@ for file in blacklist whitelist prometheus_whitelist; do
     touch "${HAP_CONF_DIR}/lists/$file.list"
 done
 
-# Strip enclosing quotes, as docker-compose does not parse shell metachars in .env
+# Strip enclosing quotes, as docker-compose<1.29 does not parse shell metachars in .env
+# See https://github.com/docker/compose/issues/8388
 ALIAS_FQDNS="${ALIAS_FQDNS%\"}"
 ALIAS_FQDNS="${ALIAS_FQDNS#\"}"
 CLUSTER_FQDNS="${CLUSTER_FQDNS%\"}"

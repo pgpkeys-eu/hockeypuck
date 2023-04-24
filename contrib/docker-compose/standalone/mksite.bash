@@ -10,12 +10,25 @@ set -eu
 
 if [ ! -e "$HERE/.env" ]; then
 
-POSTGRES_PASSWORD=$(head -c 30 /dev/urandom | base32 -w0)
+POSTGRES_PASSWORD=$(LC_ALL=C tr -dc 'A-Z3-7' </dev/urandom | fold -w 30 | head -n 1)
 cat >"$HERE/.env" <<EOF
 ###########################################################
 ## HOCKEYPUCK STANDALONE SITE CONFIGURATION TEMPLATE
 ## Edit this, then run ./mkconfig.bash
 ###########################################################
+
+#######################################################################
+## docker-compose<1.29 does not parse quoted values like a POSIX shell.
+## This means that normally you should not quote values in this file,
+## as docker-compose's old behaviour is highly unintuitive.
+## 
+## The scripts in this directory try to compensate, and can parse
+## *double* quotes around ALIAS_FQDNS, CLUSTER_FQDNS and HKP_LOG_FORMAT
+## values *only*, as these values will normally contain whitespace and
+## so most users will instinctively quote them anyway.
+##
+## In all other cases, enclosing quotes MUST NOT be used.
+#######################################################################
 
 # This is the primary FQDN of your site
 FQDN=keyserver.example.com
