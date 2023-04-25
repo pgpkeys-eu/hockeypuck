@@ -22,7 +22,6 @@ If you created a standalone deployment before April 2023, you will need to migra
 * `cd` into this directory
 * BACK UP ALL CONFIG FILES by incanting `cp -a . /path/to/somewhere/safe/`
 * Incant `./mksite.bash` to apply the migrations to your configuration settings
-* Incant `./mkconfig.bash` to create the haproxy configuration files
 
 If you have made local changes to the default nginx configuration, you will need to port these changes to haproxy.
 Please open a ticket in the hockeypuck github project if you require assistance.
@@ -39,7 +38,7 @@ Please open a ticket in the hockeypuck github project if you require assistance.
    * Set EMAIL and FINGERPRINT to the contact email and associated PGP fingerprint of the site admin.
    * Set FQDN and (optionally) ALIAS_FQDNS to the primary (and other) DNS name(s) of your server.
    * (Optional) Set ACME_SERVER to your internal CA if not using Let's Encrypt.
-* Generate Hockeypuck and HAProxy configuration from your site settings with
+* Generate the Hockeypuck configuration from your site settings with
    `./mkconfig.bash`.
 * Build hockeypuck by incanting `docker-compose build`.
 * Set up TLS with `./init-letsencrypt.bash`. Answer the prompts as needed.
@@ -99,6 +98,7 @@ To update your running configuration with changes from from upstream, incant the
 git pull
 docker-compose kill -s HUP haproxy
 docker-compose restart haproxy_cache
+docker-compose restart haproxy_internal
 ```
 
 Note that this will not pick up any changes made to the `.env` or `docker-compose.yml` files.
@@ -106,6 +106,7 @@ For this, you will need to stop and recreate the HAProxy container:
 
 ```
 docker-compose stop haproxy
+docker-compose rm haproxy
 docker-compose up -d
 ```
 
@@ -125,9 +126,9 @@ You should maintain a local branch if you want to configure these.
 
 If you have more than one `docker-compose/standalone` stack, you can cluster them by configuring the following on each node:
 
+* Bring the deployment up at least once in order to populate the local config files.
 * Add _every_ FQDN of _all_ cluster members to `CLUSTER_FQDNS` in `./.env`
    * NOTE: This is not the same as `ALIAS_FQDNS`, because certbot will not provision SSL certificates for `CLUSTER_FQDNS`
-* Regenerate the `./haproxy/etc/lists/aliases.map` file by deleting it and running `./mkconfig.bash`
 * Add the IPs of all cluster members to `./haproxy/etc/lists/whitelist.list`, one per line in CIDR format
 * Edit `./haproxy/etc/haproxy.d/90_LOCAL_be_hockeypuck.cfg`
    * Uncomment and edit the lines at the bottom to include each remote cluster member
