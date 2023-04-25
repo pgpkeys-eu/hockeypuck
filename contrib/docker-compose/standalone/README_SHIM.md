@@ -34,7 +34,7 @@ git checkout haproxy-new
 4. Edit the newly-created `.env` file:
 
 * `FQDN` and `ALIAS_FQDNS` should be self-explanatory
-* `KEYSERVER_HOST_PORT` should point to your existing keyserver HKP port (e.g. `keyserver-backend.example.com:11371`)
+* `KEYSERVER_HOST_PORT` should be uncommented and point to your existing keyserver HKP port (e.g. `keyserver-backend.example.com:11371`)
 * `HAP_{HTTP,HTTPS,HKP}_HOST_PORT` should _all_ be uncommented and set to unused localhost ports e.g. `localhost:8080`
 * `HAP_BEHIND_PROXY` should be uncommented and set to `true`
 
@@ -72,7 +72,6 @@ It should start the following containers only:
 * standalone_haproxy_1
 * standalone_haproxy_internal_1
 * standalone_haproxy_cache_1
-* standalone_prometheus_1
 
 To verify, incant
 
