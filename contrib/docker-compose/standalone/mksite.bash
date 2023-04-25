@@ -10,7 +10,7 @@ set -eu
 
 if [ ! -e "$HERE/.env" ]; then
 
-POSTGRES_PASSWORD=$(LC_ALL=C tr -dc 'A-Z3-7' </dev/urandom | fold -w 30 | head -n 1)
+POSTGRES_PASSWORD=$(LC_ALL=C tr -dc 'A-Z3-7' </dev/urandom | fold -w 48 | head -n 1)
 cat >"$HERE/.env" <<EOF
 ###########################################################
 ## HOCKEYPUCK STANDALONE SITE CONFIGURATION TEMPLATE
