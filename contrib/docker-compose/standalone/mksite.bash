@@ -62,7 +62,7 @@ cat >>"$HERE/.env" <<EOF
 #KEYSERVER_HOST_PORT=hockeypuck:11371
 
 # Remote URL for fetching tor exit relays list
-TOR_EXIT_RELAYS_URL="https://www.dan.me.uk/torlist/?exit"
+TOR_EXIT_RELAYS_URL=https://www.dan.me.uk/torlist/?exit
 
 # Advanced HAProxy configuration options
 
