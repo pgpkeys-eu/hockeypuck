@@ -21,10 +21,7 @@
 package jsonhkp
 
 import (
-	"encoding/base64"
-	"fmt"
 	"io"
-	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -40,9 +37,8 @@ type Packet struct {
 
 func NewPacket(from *openpgp.Packet) *Packet {
 	return &Packet{
-		Tag:    from.Tag,
-		Data:   from.Packet,
-		Parsed: from.Parsed,
+		Tag:  from.Tag,
+		Data: from.Packet,
 	}
 }
 
@@ -62,7 +58,6 @@ type PublicKey struct {
 	Algorithm    algorithm    `json:"algorithm"`
 	BitLength    int          `json:"bitLength"`
 	Signatures   []*Signature `json:"signatures,omitempty"`
-	Unsupported  []*Packet    `json:"unsupported,omitempty"`
 	Packet       *Packet      `json:"packet,omitempty"`
 }
 
@@ -94,9 +89,6 @@ func newPublicKey(from *openpgp.PublicKey) *PublicKey {
 	for _, fromSig := range from.Signatures {
 		to.Signatures = append(to.Signatures, NewSignature(fromSig))
 	}
-	for _, fromPkt := range from.Others {
-		to.Unsupported = append(to.Unsupported, NewPacket(fromPkt))
-	}
 
 	return to
 }
@@ -104,11 +96,10 @@ func newPublicKey(from *openpgp.PublicKey) *PublicKey {
 type PrimaryKey struct {
 	*PublicKey
 
-	MD5       string           `json:"md5"`
-	Length    int              `json:"length"`
-	SubKeys   []*SubKey        `json:"subKeys,omitempty"`
-	UserIDs   []*UserID        `json:"userIDs,omitempty"`
-	UserAttrs []*UserAttribute `json:"userAttrs,omitempty"`
+	MD5     string    `json:"md5"`
+	Length  int       `json:"length"`
+	SubKeys []*SubKey `json:"subKeys,omitempty"`
+	UserIDs []*UserID `json:"userIDs,omitempty"`
 }
 
 func NewPrimaryKeys(froms []*openpgp.PrimaryKey) []*PrimaryKey {
@@ -130,9 +121,6 @@ func NewPrimaryKey(from *openpgp.PrimaryKey) *PrimaryKey {
 	}
 	for _, fromUid := range from.UserIDs {
 		to.UserIDs = append(to.UserIDs, NewUserID(fromUid))
-	}
-	for _, fromUat := range from.UserAttributes {
-		to.UserAttrs = append(to.UserAttrs, NewUserAttribute(fromUat))
 	}
 	return to
 }
@@ -159,10 +147,9 @@ func NewSubKey(from *openpgp.SubKey) *SubKey {
 }
 
 type UserID struct {
-	Keywords    string       `json:"keywords"`
-	Packet      *Packet      `json:"packet,omitempty"`
-	Signatures  []*Signature `json:"signatures,omitempty"`
-	Unsupported []*Packet    `json:"unsupported,omitempty"`
+	Keywords   string       `json:"keywords"`
+	Packet     *Packet      `json:"packet,omitempty"`
+	Signatures []*Signature `json:"signatures,omitempty"`
 }
 
 func NewUserID(from *openpgp.UserID) *UserID {
@@ -173,50 +160,7 @@ func NewUserID(from *openpgp.UserID) *UserID {
 	for _, fromSig := range from.Signatures {
 		to.Signatures = append(to.Signatures, NewSignature(fromSig))
 	}
-	for _, fromPkt := range from.Others {
-		to.Unsupported = append(to.Unsupported, NewPacket(fromPkt))
-	}
 	return to
-}
-
-type UserAttribute struct {
-	Photos      []*Photo     `json:"photos,omitempty"`
-	Packet      *Packet      `json:"packet,omitempty"`
-	Signatures  []*Signature `json:"signatures,omitempty"`
-	Unsupported []*Packet    `json:"unsupported,omitempty"`
-}
-
-func NewUserAttribute(from *openpgp.UserAttribute) *UserAttribute {
-	to := &UserAttribute{
-		Packet: NewPacket(&from.Packet),
-	}
-	for _, image := range from.Images {
-		to.Photos = append(to.Photos, NewPhoto(image))
-	}
-	for _, fromSig := range from.Signatures {
-		to.Signatures = append(to.Signatures, NewSignature(fromSig))
-	}
-	for _, fromPkt := range from.Others {
-		to.Unsupported = append(to.Unsupported, NewPacket(fromPkt))
-	}
-	return to
-}
-
-type Photo struct {
-	MIMEType string `json:"mimeType"`
-	Contents []byte `json:"contents"`
-}
-
-func NewPhoto(image []byte) *Photo {
-	return &Photo{
-		MIMEType: "image/jpeg", // The only image format currently supported, AFAIK
-		Contents: image,
-	}
-}
-
-func (p *Photo) DataURI() (*url.URL, error) {
-	return url.Parse(fmt.Sprintf(
-		"data:%s;base64,%s", p.MIMEType, base64.StdEncoding.EncodeToString(p.Contents)))
 }
 
 type Signature struct {
@@ -275,9 +219,6 @@ func (pk *PublicKey) packets() []*Packet {
 	for _, s := range pk.Signatures {
 		packets = append(packets, s.packets()...)
 	}
-	for _, un := range pk.Unsupported {
-		packets = append(packets, un)
-	}
 	return packets
 }
 
@@ -286,29 +227,12 @@ func (u *UserID) packets() []*Packet {
 	for _, s := range u.Signatures {
 		packets = append(packets, s.packets()...)
 	}
-	for _, un := range u.Unsupported {
-		packets = append(packets, un)
-	}
-	return packets
-}
-
-func (u *UserAttribute) packets() []*Packet {
-	packets := []*Packet{u.Packet}
-	for _, s := range u.Signatures {
-		packets = append(packets, s.packets()...)
-	}
-	for _, un := range u.Unsupported {
-		packets = append(packets, un)
-	}
 	return packets
 }
 
 func (pk *PrimaryKey) packets() []*Packet {
 	packets := pk.PublicKey.packets()
 	for _, u := range pk.UserIDs {
-		packets = append(packets, u.packets()...)
-	}
-	for _, u := range pk.UserAttrs {
 		packets = append(packets, u.packets()...)
 	}
 	for _, s := range pk.SubKeys {

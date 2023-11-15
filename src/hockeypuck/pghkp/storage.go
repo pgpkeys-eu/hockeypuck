@@ -554,7 +554,11 @@ func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		result = append(result, key)
+		if key == nil {
+			log.Errorf("Unparseable key material in database (rfp=%s)", rfp)
+		} else {
+			result = append(result, key)
+		}
 	}
 	err = rows.Err()
 	if err != nil {
@@ -599,8 +603,12 @@ func (st *storage) FetchKeyrings(rfps []string) ([]*hkpstorage.Keyring, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		kr.PrimaryKey = key
-		result = append(result, &kr)
+		if key == nil {
+			log.Errorf("Unparseable key material in database (rfp=%s)", rfp)
+		} else {
+			kr.PrimaryKey = key
+			result = append(result, &kr)
+		}
 	}
 	err = rows.Err()
 	if err != nil {

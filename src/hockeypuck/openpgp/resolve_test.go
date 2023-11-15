@@ -61,30 +61,6 @@ func (s *ResolveSuite) TestDupSigSksDigest(c *gc.C) {
 	c.Assert(sksDigest, gc.Equals, "6d57b48c83d6322076d634059bb3b94b")
 }
 
-func (s *ResolveSuite) TestRoundTripSksDigest(c *gc.C) {
-	f := testing.MustInput("252B8B37.dupsig.asc")
-	defer f.Close()
-	block, err := armor.Decode(f)
-	c.Assert(err, gc.IsNil)
-
-	keys := MustReadKeys(block.Body)
-	c.Assert(keys, gc.HasLen, 1)
-	key := keys[0]
-
-	var packets []*packet.OpaquePacket
-	for _, node := range key.contents() {
-		packet := node.packet()
-		for i := 0; i <= packet.Count; i++ {
-			op, err := newOpaquePacket(packet.Packet)
-			c.Assert(err, gc.IsNil)
-			packets = append(packets, op)
-		}
-	}
-
-	sksDigest := sksDigestOpaque(packets, md5.New())
-	c.Assert(sksDigest, gc.Equals, "6d57b48c83d6322076d634059bb3b94b")
-}
-
 func patchNow(t time.Time) func() {
 	now = func() time.Time {
 		return t
@@ -98,8 +74,6 @@ func (s *ResolveSuite) TestUserIDSigInfo(c *gc.C) {
 	defer patchNow(time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC))()
 
 	key := MustInputAscKey("lp1195901.asc")
-	err := DropDuplicates(key)
-	c.Assert(err, gc.IsNil)
 	Sort(key)
 	// Primary UID
 	c.Assert(key.UserIDs[0].Keywords, gc.Equals, "Phil Pennock <pdp@exim.org>")
@@ -111,8 +85,6 @@ func (s *ResolveSuite) TestUserIDSigInfo(c *gc.C) {
 	}
 
 	key = MustInputAscKey("lp1195901_2.asc")
-	err = DropDuplicates(key)
-	c.Assert(err, gc.IsNil)
 	Sort(key)
 	c.Assert(key.UserIDs[0].Keywords, gc.Equals, "Phil Pennock <phil.pennock@globnix.org>")
 }
@@ -121,8 +93,6 @@ func (s *ResolveSuite) TestSortUserIDs(c *gc.C) {
 	defer patchNow(time.Date(2014, time.January, 1, 0, 0, 0, 0, time.UTC))()
 
 	key := MustInputAscKey("lp1195901.asc")
-	err := DropDuplicates(key)
-	c.Assert(err, gc.IsNil)
 	Sort(key)
 	expect := []string{
 		"Phil Pennock <pdp@exim.org>",
@@ -139,8 +109,6 @@ func (s *ResolveSuite) TestKeyExpiration(c *gc.C) {
 	defer patchNow(time.Date(2013, time.January, 1, 0, 0, 0, 0, time.UTC))()
 
 	key := MustInputAscKey("lp1195901.asc")
-	err := DropDuplicates(key)
-	c.Assert(err, gc.IsNil)
 	Sort(key)
 
 	c.Assert(key.SubKeys, gc.HasLen, 7)
@@ -163,18 +131,6 @@ func (s *ResolveSuite) TestUnsuppIgnored(c *gc.C) {
 	c.Assert(keys, gc.HasLen, 1)
 	key := keys[0]
 	c.Assert(key, gc.NotNil)
-	for _, node := range key.contents() {
-		switch p := node.(type) {
-		case *PrimaryKey:
-			c.Assert(p.Others, gc.HasLen, 0)
-		case *SubKey:
-			c.Assert(p.Others, gc.HasLen, 0)
-		case *UserID:
-			c.Assert(p.Others, gc.HasLen, 0)
-		case *UserAttribute:
-			c.Assert(p.Others, gc.HasLen, 0)
-		}
-	}
 }
 
 func (s *ResolveSuite) TestMissingUidFk(c *gc.C) {
@@ -276,13 +232,6 @@ func (s *ResolveSuite) TestSelfSignedOnly_V3SigDropped(c *gc.C) {
 	}
 	// v3 signature on a v4 encryption subkey is NOT dropped
 	c.Assert(key.SubKeys, gc.HasLen, 1)
-}
-
-func (s *ResolveSuite) TestFakeNews(c *gc.C) {
-	key := MustInputAscKey("fakenews.asc")
-	c.Assert(key.UserAttributes, gc.HasLen, 1)
-	c.Assert(ValidSelfSigned(key, false), gc.IsNil)
-	c.Assert(key.UserAttributes, gc.HasLen, 0)
 }
 
 func (s *ResolveSuite) TestResolveRootSignatures(c *gc.C) {

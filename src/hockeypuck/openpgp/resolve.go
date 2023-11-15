@@ -44,7 +44,6 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 		key.Signatures = append(key.Signatures, others...)
 	}
 	var userIDs []*UserID
-	var userAttributes []*UserAttribute
 	var subKeys []*SubKey
 	for _, uid := range key.UserIDs {
 		ss, others := uid.SigInfo(key)
@@ -71,33 +70,6 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 			userIDs = append(userIDs, uid)
 		} else {
 			log.Debugf("Dropped uid '%s' because no valid self-sigs", uid.Keywords)
-		}
-	}
-	for _, uat := range key.UserAttributes {
-		ss, others := uat.SigInfo(key)
-		var certs []*Signature
-		for _, cert := range ss.Revocations {
-			if cert.Error == nil {
-				certs = append(certs, cert.Signature)
-			} else {
-				log.Debugf("Dropped revocation sig on uat %s because %s", uat.UUID, cert.Error.Error())
-			}
-		}
-		for _, cert := range ss.Certifications {
-			if cert.Error == nil {
-				certs = append(certs, cert.Signature)
-			} else {
-				log.Debugf("Dropped certification sig on uat %s because %s", uat.UUID, cert.Error.Error())
-			}
-		}
-		if len(certs) > 0 {
-			uat.Signatures = certs
-			if !selfSignedOnly {
-				uat.Signatures = append(uat.Signatures, others...)
-			}
-			userAttributes = append(userAttributes, uat)
-		} else {
-			log.Debugf("Dropped uat %s because no valid self-sigs", uat.UUID)
 		}
 	}
 	for _, subKey := range key.SubKeys {
@@ -128,27 +100,7 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 		}
 	}
 	key.UserIDs = userIDs
-	key.UserAttributes = userAttributes
 	key.SubKeys = subKeys
-	return key.updateMD5()
-}
-
-func DropMalformed(key *PrimaryKey) error {
-	var others []*Packet
-	for _, other := range key.Others {
-		if !other.Malformed {
-			others = append(others, other)
-		}
-	}
-	key.Others = others
-	return key.updateMD5()
-}
-
-func DropDuplicates(key *PrimaryKey) error {
-	err := dedup(key, nil)
-	if err != nil {
-		return errors.WithStack(err)
-	}
 	return key.updateMD5()
 }
 
@@ -164,9 +116,7 @@ func CollectDuplicates(key *PrimaryKey) error {
 
 func Merge(dst, src *PrimaryKey) error {
 	dst.UserIDs = append(dst.UserIDs, src.UserIDs...)
-	dst.UserAttributes = append(dst.UserAttributes, src.UserAttributes...)
 	dst.SubKeys = append(dst.SubKeys, src.SubKeys...)
-	dst.Others = append(dst.Others, src.Others...)
 	dst.Signatures = append(dst.Signatures, src.Signatures...)
 
 	err := dedup(dst, func(primary, duplicate packetNode) {
@@ -176,10 +126,6 @@ func Merge(dst, src *PrimaryKey) error {
 			primaryPacket.Count = duplicatePacket.Count
 		}
 	})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	err = DropMalformed(dst)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -196,10 +142,6 @@ func MergeRevocationSig(dst *PrimaryKey, src *Signature) error {
 			primaryPacket.Count = duplicatePacket.Count
 		}
 	})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	err = DropMalformed(dst)
 	if err != nil {
 		return errors.WithStack(err)
 	}

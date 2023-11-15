@@ -31,7 +31,6 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
-	pgperrors "github.com/ProtonMail/go-crypto/openpgp/errors"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/pkg/errors"
 
@@ -133,8 +132,6 @@ func (ok *OpaqueKeyring) Parse() (*PrimaryKey, error) {
 	var keyCreationTime time.Time
 	var length int
 	for _, opkt := range ok.Packets {
-		length += len(opkt.Contents)
-		var badPacket *packet.OpaquePacket
 		if opkt.Tag == 6 { //packet.PacketTypePublicKey:
 			if pubkey != nil {
 				return nil, errors.Errorf("multiple public keys in keyring")
@@ -151,8 +148,8 @@ func (ok *OpaqueKeyring) Parse() (*PrimaryKey, error) {
 				signablePacket = nil
 				subkey, err := ParseSubKey(opkt)
 				if err != nil {
-					log.Debugf("unreadable subkey packet in key 0x%s: %v", pubkey.KeyID(), err)
-					badPacket = opkt
+					log.Warnf("unreadable subkey packet in key 0x%s: %v", pubkey.Fingerprint(), err)
+					continue
 				} else {
 					pubkey.SubKeys = append(pubkey.SubKeys, subkey)
 					signablePacket = subkey
@@ -162,60 +159,40 @@ func (ok *OpaqueKeyring) Parse() (*PrimaryKey, error) {
 				signablePacket = nil
 				uid, err := ParseUserID(opkt, pubkey.UUID)
 				if err != nil {
-					log.Debugf("unreadable user id packet in key 0x%s: %v", pubkey.KeyID(), err)
-					badPacket = opkt
+					log.Warnf("unreadable user id packet in key 0x%s: %v", pubkey.Fingerprint(), err)
+					continue
 				} else {
 					pubkey.UserIDs = append(pubkey.UserIDs, uid)
 					signablePacket = uid
 				}
-			case 17: //packet.PacketTypeUserAttribute:
-				signablePacket = nil
-				uat, err := ParseUserAttribute(opkt, pubkey.UUID)
-				if err != nil {
-					log.Debugf("unreadable user attribute packet in key 0x%s: %v", pubkey.KeyID(), err)
-					badPacket = opkt
-				} else {
-					pubkey.UserAttributes = append(pubkey.UserAttributes, uat)
-					signablePacket = uat
-				}
 			case 2: //packet.PacketTypeSignature:
 				if signablePacket == nil {
-					log.Debugf("signature out of context")
-					badPacket = opkt
+					log.Warnf("signature out of context fp=%s", pubkey.Fingerprint())
+					continue
 				} else {
 					sig, err := ParseSignature(opkt, keyCreationTime, pubkey.UUID, signablePacket.uuid())
 					if err != nil {
-						log.Debugf("unreadable signature packet in key 0x%s: %v", pubkey.KeyID(), err)
-						badPacket = opkt
+						log.Warnf("unreadable signature packet in key 0x%s: %v", pubkey.Fingerprint(), err)
+						continue
 					} else {
 						signablePacket.appendSignature(sig)
 					}
 				}
+			case 10: //packet.PacketTypeMarker:
+				// drop marker packets, which can appear anywhere without altering the semantics
+				log.Warnf("marker packet found in OpaqueKeyring")
+				continue
 			default:
-				badPacket = opkt
+				// make sure that signatures over an unsupported packet are correctly dropped
+				log.Warnf("unsupported packet type %d in OpaqueKeyring", opkt.Tag)
+				signablePacket = nil
+				continue
 			}
 
-			if badPacket != nil {
-				var badParent string
-				if signablePacket != nil {
-					badParent = signablePacket.uuid()
-				} else {
-					badParent = pubkey.uuid()
-				}
-				other, err := ParseOther(badPacket, badParent)
-				if err != nil {
-					return nil, errors.WithStack(err)
-				}
-				_, isStructuralError := badPacket.Reason.(pgperrors.StructuralError)
-				if badPacket.Reason == io.ErrUnexpectedEOF || isStructuralError {
-					log.Debugf("malformed packet in key 0x%s: %v", pubkey.KeyID(), badPacket.Reason)
-					other.Malformed = true
-				}
-				pubkey.Others = append(pubkey.Others, other)
-			}
 		} else if opkt.Tag == 2 { //packet.PacketTypeSignature:
 			return nil, ErrBareRevocation
 		}
+		length += len(opkt.Contents)
 	}
 	if pubkey == nil {
 		return nil, errors.New("primary public key not found")
@@ -319,7 +296,6 @@ PARSE:
 			}
 			current = &OpaqueKeyring{}
 			current.setPosition(r.r)
-			currentKeyLen = 0
 			currentFingerprint = fp
 			current.Packets = append(current.Packets, op)
 		case 2:
@@ -334,10 +310,7 @@ PARSE:
 				currentFingerprint = ""
 				current.Packets = append(current.Packets, op)
 			}
-		case 13, 14, 17:
-			//packet.PacketTypeUserId,
-			//packet.PacketTypeUserAttribute,
-			//packet.PacketTypePublicSubKey,
+		default:
 			if current != nil {
 				current.Packets = append(current.Packets, op)
 			}

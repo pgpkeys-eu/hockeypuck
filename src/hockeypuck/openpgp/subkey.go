@@ -35,9 +35,6 @@ func (subkey *SubKey) contents() []packetNode {
 	for _, sig := range subkey.Signatures {
 		result = append(result, sig.contents()...)
 	}
-	for _, p := range subkey.Others {
-		result = append(result, p.contents()...)
-	}
 	return result
 }
 
@@ -58,13 +55,10 @@ func ParseSubKey(op *packet.OpaquePacket) (*SubKey, error) {
 	}
 
 	// Attempt to parse the opaque packet into a public key type.
-	parseErr := subkey.parse(op, true)
-	if parseErr != nil {
-		subkey.setUnsupported(op)
-	} else {
-		subkey.Parsed = true
+	err = subkey.parse(op, true)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
-
 	return subkey, nil
 }
 
@@ -79,7 +73,6 @@ func (subkey *SubKey) removeDuplicate(parent packetNode, dup packetNode) error {
 	}
 
 	subkey.Signatures = append(subkey.Signatures, dupSubKey.Signatures...)
-	subkey.Others = append(subkey.Others, dupSubKey.Others...)
 	pubkey.SubKeys = subkeySlice(pubkey.SubKeys).without(dupSubKey)
 	return nil
 }

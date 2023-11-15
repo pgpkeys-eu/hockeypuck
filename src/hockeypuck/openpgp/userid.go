@@ -32,7 +32,6 @@ type UserID struct {
 	Keywords string
 
 	Signatures []*Signature
-	Others     []*Packet
 }
 
 const uidTag = "{uid}"
@@ -42,9 +41,6 @@ func (uid *UserID) contents() []packetNode {
 	result := []packetNode{uid}
 	for _, sig := range uid.Signatures {
 		result = append(result, sig.contents()...)
-	}
-	for _, p := range uid.Others {
-		result = append(result, p.contents()...)
 	}
 	return result
 }
@@ -65,7 +61,6 @@ func (uid *UserID) removeDuplicate(parent packetNode, dup packetNode) error {
 	}
 
 	uid.Signatures = append(uid.Signatures, dupUserID.Signatures...)
-	uid.Others = append(uid.Others, dupUserID.Others...)
 	pubkey.UserIDs = uidSlice(pubkey.UserIDs).without(dupUserID)
 	return nil
 }
@@ -108,7 +103,6 @@ func ParseUserID(op *packet.OpaquePacket, parentID string) (*UserID, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	uid.Parsed = true
 	return uid, nil
 }
 

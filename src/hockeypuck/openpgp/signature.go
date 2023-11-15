@@ -56,8 +56,6 @@ func (sig *Signature) removeDuplicate(parent packetNode, dup packetNode) error {
 		ppkt.Signatures = sigSlice(ppkt.Signatures).without(dupSig)
 	case *UserID:
 		ppkt.Signatures = sigSlice(ppkt.Signatures).without(dupSig)
-	case *UserAttribute:
-		ppkt.Signatures = sigSlice(ppkt.Signatures).without(dupSig)
 	}
 	return nil
 }
@@ -94,7 +92,6 @@ func ParseSignature(op *packet.OpaquePacket, keyCreationTime time.Time, pubkeyUU
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	sig.Parsed = true
 	return sig, nil
 }
 

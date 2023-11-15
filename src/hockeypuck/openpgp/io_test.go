@@ -26,7 +26,6 @@ import (
 	stdtesting "testing"
 
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
-	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	gc "gopkg.in/check.v1"
 
 	"hockeypuck/testing"
@@ -37,16 +36,6 @@ func Test(t *stdtesting.T) { gc.TestingT(t) }
 type SamplePacketSuite struct{}
 
 var _ = gc.Suite(&SamplePacketSuite{})
-
-func (s *SamplePacketSuite) TestVerifyUserAttributeSig(c *gc.C) {
-	key := MustInputAscKey("uat.asc")
-	c.Assert(key.UserAttributes, gc.HasLen, 1)
-	DropDuplicates(key)
-	c.Assert(key.UserAttributes, gc.HasLen, 1)
-	uat := key.UserAttributes[0]
-	c.Assert(uat.Images, gc.HasLen, 1)
-	// TODO: check contents
-}
 
 func (s *SamplePacketSuite) TestSksDigest(c *gc.C) {
 	key := MustInputAscKey("sksdigest.asc")
@@ -84,8 +73,6 @@ func (s *SamplePacketSuite) TestSksContextualDup(c *gc.C) {
 	digest1, err := SksDigest(pk, md5.New())
 	c.Assert(err, gc.IsNil)
 
-	err = DropDuplicates(pk)
-	c.Assert(err, gc.IsNil)
 	digest2, err := SksDigest(pk, md5.New())
 	c.Assert(err, gc.IsNil)
 
@@ -112,7 +99,6 @@ func (s *SamplePacketSuite) TestSksContextualDup(c *gc.C) {
 
 	c.Log("deduped primary key")
 	key = MustInputAscKey("sks_fail.asc")
-	DropDuplicates(key)
 	dedupDigest, err := SksDigest(key, md5.New())
 	c.Assert(err, gc.IsNil)
 	var packetsDedup opaquePacketSlice
@@ -129,42 +115,18 @@ func (s *SamplePacketSuite) TestSksContextualDup(c *gc.C) {
 	c.Assert(dupDigest, gc.Equals, dedupDigest)
 }
 
-func (s *SamplePacketSuite) TestUatRtt(c *gc.C) {
-	f := testing.MustInput("uat.asc")
-	defer f.Close()
-	block, err := armor.Decode(f)
-	c.Assert(err, gc.IsNil)
-	var p packet.Packet
-	for {
-		p, err = packet.Read(block.Body)
-		if err != nil {
-			c.Assert(err, gc.Equals, io.EOF)
-			break
-		}
-
-		uat, ok := p.(*packet.UserAttribute)
-		if ok {
-			var buf bytes.Buffer
-			uat.Serialize(&buf)
-			or := packet.NewOpaqueReader(bytes.NewBuffer(buf.Bytes()))
-			op, _ := or.Next()
-			c.Assert(buf.Bytes()[3:], gc.DeepEquals, op.Contents)
-		}
-	}
-}
-
 func (s *SamplePacketSuite) TestPacketCounts(c *gc.C) {
 	testCases := []struct {
-		name                                         string
-		nUserID, nUserAttribute, nSubKey, nSignature int
+		name                         string
+		nUserID, nSubKey, nSignature int
 	}{{
-		"0ff16c87.asc", 9, 0, 1, 0,
+		"0ff16c87.asc", 9, 1, 0,
 	}, {
-		"alice_signed.asc", 1, 0, 1, 0,
+		"alice_signed.asc", 1, 1, 0,
 	}, {
-		"uat.asc", 2, 1, 3, 0,
+		"uat.asc", 2, 3, 0,
 	}, {
-		"252B8B37.dupsig.asc", 3, 0, 2, 1,
+		"252B8B37.dupsig.asc", 3, 1, 1, // the second subkey here is elgES, which should also be dropped
 	}}
 	for i, testCase := range testCases {
 		c.Logf("test#%d: %s", i, testCase.name)
@@ -175,7 +137,6 @@ func (s *SamplePacketSuite) TestPacketCounts(c *gc.C) {
 		for _, key := range MustReadKeys(block.Body) {
 			c.Assert(key, gc.NotNil)
 			c.Assert(key.UserIDs, gc.HasLen, testCase.nUserID)
-			c.Assert(key.UserAttributes, gc.HasLen, testCase.nUserAttribute)
 			c.Assert(key.SubKeys, gc.HasLen, testCase.nSubKey)
 			c.Assert(key.Signatures, gc.HasLen, testCase.nSignature)
 		}
@@ -262,17 +223,6 @@ func (s *SamplePacketSuite) TestRevocationCert(c *gc.C) {
 	c.Assert(keyrings[0].Packets[0].Tag, gc.Equals, uint8(2))
 }
 
-func (s *SamplePacketSuite) TestMalformedSignatures(c *gc.C) {
-	key := MustInputAscKey("a7400f5a_nobadsigs.asc")
-	c.Assert(len(key.Others), gc.Equals, 0)
-
-	key = MustInputAscKey("a7400f5a_badsigs.asc")
-	c.Assert(len(key.Others), gc.Equals, 3)
-	for _, other := range key.Others {
-		c.Assert(other.Malformed, gc.Equals, true)
-	}
-}
-
 func (s *SamplePacketSuite) TestECCSelfSigs(c *gc.C) {
 	keys := MustInputAscKeys("ecc_keys.asc")
 	c.Assert(keys, gc.HasLen, 6)
@@ -311,12 +261,10 @@ func (s *SamplePacketSuite) TestMaxPacketLen(c *gc.C) {
 	keys, err := ReadArmorKeys(testing.MustInput("uat.asc"))
 	c.Assert(err, gc.IsNil)
 	c.Assert(keys, gc.HasLen, 1)
-	c.Assert(keys[0].UserAttributes, gc.HasLen, 1)
 	// UAT packet is > 3k bytes long
 	keys, err = ReadArmorKeys(testing.MustInput("uat.asc"), MaxPacketLen(2048))
 	c.Assert(err, gc.IsNil)
 	c.Assert(keys, gc.HasLen, 1)
-	c.Assert(keys[0].UserAttributes, gc.HasLen, 0)
 }
 
 func (s *SamplePacketSuite) TestMaxKeyLenConcat(c *gc.C) {
@@ -357,7 +305,7 @@ func (s *SamplePacketSuite) TestKeyLength(c *gc.C) {
 	keys, err := ReadArmorKeys(testing.MustInput("uat.asc"))
 	c.Assert(err, gc.IsNil)
 	c.Assert(keys, gc.HasLen, 1)
-	c.Assert(keys[0].Length, gc.Equals, 8429)
+	c.Assert(keys[0].Length, gc.Equals, 4893)
 }
 
 func (s *SamplePacketSuite) TestWriteArmorHeaders(c *gc.C) {

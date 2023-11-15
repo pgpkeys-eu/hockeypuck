@@ -18,9 +18,6 @@
 package openpgp
 
 import (
-	"crypto"
-	"hash"
-
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/pkg/errors"
 )
@@ -150,65 +147,4 @@ func (pubkey *PrimaryKey) verifyUserIDSelfSig(uid *UserID, sig *Signature) error
 	default:
 		return errors.WithStack(ErrInvalidPacketType)
 	}
-}
-
-func (pubkey *PrimaryKey) verifyUserAttrSelfSig(uat *UserAttribute, sig *Signature) error {
-	pk, err := pubkey.PublicKey.publicKeyPacket()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	s, err := sig.signaturePacket()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	h, err := pubkey.sigSerializeUserAttribute(uat, s.Hash)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return pk.VerifySignature(h, s)
-}
-
-// sigSerializeUserAttribute calculates the user attribute packet hash
-// TODO: clean up & contribute this to github.com/ProtonMail/go-crypto/openpgp.
-func (pubkey *PrimaryKey) sigSerializeUserAttribute(uat *UserAttribute, hashFunc crypto.Hash) (hash.Hash, error) {
-	if !hashFunc.Available() {
-		return nil, errors.Errorf("unsupported hash function: %v", hashFunc)
-	}
-	h := hashFunc.New()
-
-	// Get user attribute opaque packet
-	uatOpaque, err := uat.opaquePacket()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	// Get public key opaque packet.
-	pkOpaque, err := pubkey.opaquePacket()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	// Get public key v4 packet. User attributes not supported pre-v4.
-	pk, err := pubkey.PublicKey.publicKeyPacket()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	// RFC 4880, section 5.2.4
-	// Write the signature prefix and public key contents to hash
-	pk.SerializeSignaturePrefix(h)
-	h.Write(pkOpaque.Contents)
-
-	// V4 certification hash
-	var buf [5]byte
-	// User attribute constant
-	buf[0] = 0xd1
-	// Big-endian length of user attribute contents
-	l := len(uatOpaque.Contents)
-	buf[1] = byte(l >> 24)
-	buf[2] = byte(l >> 16)
-	buf[3] = byte(l >> 8)
-	buf[4] = byte(l)
-	h.Write(buf[:])
-	// User attribute contents
-	h.Write(uatOpaque.Contents)
-	return h, nil
 }

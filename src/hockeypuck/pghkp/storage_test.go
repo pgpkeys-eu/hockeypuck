@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -88,7 +88,7 @@ func (s *S) TearDownTest(c *gc.C) {
 }
 
 func (s *S) addKey(c *gc.C, keyname string) {
-	keytext, err := ioutil.ReadAll(testing.MustInput(keyname))
+	keytext, err := io.ReadAll(testing.MustInput(keyname))
 	c.Assert(err, gc.IsNil)
 	res, err := http.PostForm(s.srv.URL+"/pks/add", url.Values{
 		"keytext": []string{string(keytext)},
@@ -96,7 +96,7 @@ func (s *S) addKey(c *gc.C, keyname string) {
 	c.Assert(err, gc.IsNil)
 	c.Assert(res.StatusCode, gc.Equals, http.StatusOK)
 	defer res.Body.Close()
-	_, err = ioutil.ReadAll(res.Body)
+	_, err = io.ReadAll(res.Body)
 	c.Assert(err, gc.IsNil)
 }
 
@@ -139,7 +139,7 @@ func (s *S) TestMD5(c *gc.C) {
 
 	res, err = http.Get(s.srv.URL + "/pks/lookup?op=hget&search=da84f40d830a7be2a3c0b7f2e146bfaa")
 	c.Assert(err, gc.IsNil)
-	armor, err := ioutil.ReadAll(res.Body)
+	armor, err := io.ReadAll(res.Body)
 	res.Body.Close()
 	c.Assert(err, gc.IsNil)
 	c.Assert(res.StatusCode, gc.Equals, http.StatusOK)
@@ -203,7 +203,7 @@ func (s *S) TestResolve(c *gc.C) {
 		comment := gc.Commentf("search=%s", search)
 		res, err = http.Get(s.srv.URL + "/pks/lookup?op=get&search=" + search)
 		c.Assert(err, gc.IsNil, comment)
-		armor, err := ioutil.ReadAll(res.Body)
+		armor, err := io.ReadAll(res.Body)
 		res.Body.Close()
 		c.Assert(err, gc.IsNil, comment)
 		c.Assert(res.StatusCode, gc.Equals, http.StatusOK, comment)
@@ -212,7 +212,6 @@ func (s *S) TestResolve(c *gc.C) {
 		c.Assert(keys, gc.HasLen, 1)
 		c.Assert(keys[0].ShortID(), gc.Equals, "44a2d1db")
 		c.Assert(keys[0].UserIDs, gc.HasLen, 2)
-		c.Assert(keys[0].UserAttributes, gc.HasLen, 1)
 		c.Assert(keys[0].UserIDs[0].Keywords, gc.Equals, "Casey Marshall <casey.marshall@gazzang.com>")
 	}
 
@@ -255,7 +254,7 @@ func (s *S) TestResolveWithHyphen(c *gc.C) {
 		comment := gc.Commentf("search=%s", search)
 		res, err = http.Get(s.srv.URL + "/pks/lookup?op=get&search=" + search)
 		c.Assert(err, gc.IsNil, comment)
-		armor, err := ioutil.ReadAll(res.Body)
+		armor, err := io.ReadAll(res.Body)
 		res.Body.Close()
 		c.Assert(err, gc.IsNil, comment)
 		c.Assert(res.StatusCode, gc.Equals, http.StatusOK, comment)
@@ -264,7 +263,6 @@ func (s *S) TestResolveWithHyphen(c *gc.C) {
 		c.Assert(keys, gc.HasLen, 1)
 		c.Assert(keys[0].ShortID(), gc.Equals, "2632c2c3")
 		c.Assert(keys[0].UserIDs, gc.HasLen, 1)
-		c.Assert(keys[0].UserAttributes, gc.HasLen, 0)
 		c.Assert(keys[0].UserIDs[0].Keywords, gc.Equals, "steven-12345 (Test Encryption) <steven-test@example.com>")
 	}
 
@@ -312,7 +310,7 @@ func (s *S) TestResolveBareEmail(c *gc.C) {
 		comment := gc.Commentf("search=%s", search)
 		res, err = http.Get(s.srv.URL + "/pks/lookup?op=get&search=" + search)
 		c.Assert(err, gc.IsNil, comment)
-		armor, err := ioutil.ReadAll(res.Body)
+		armor, err := io.ReadAll(res.Body)
 		res.Body.Close()
 		c.Assert(err, gc.IsNil, comment)
 		c.Assert(res.StatusCode, gc.Equals, http.StatusOK, comment)
@@ -321,7 +319,6 @@ func (s *S) TestResolveBareEmail(c *gc.C) {
 		c.Assert(keys, gc.HasLen, 1)
 		c.Assert(keys[0].ShortID(), gc.Equals, "573f7c77")
 		c.Assert(keys[0].UserIDs, gc.HasLen, 1)
-		c.Assert(keys[0].UserAttributes, gc.HasLen, 0)
 		c.Assert(keys[0].UserIDs[0].Keywords, gc.Equals, "support@posteo.de")
 	}
 
@@ -346,7 +343,7 @@ func (s *S) TestMerge(c *gc.C) {
 
 	res, err := http.Get(s.srv.URL + "/pks/lookup?op=get&search=alice@example.com")
 	c.Assert(err, gc.IsNil)
-	armor, err := ioutil.ReadAll(res.Body)
+	armor, err := io.ReadAll(res.Body)
 	res.Body.Close()
 	c.Assert(err, gc.IsNil)
 	c.Assert(res.StatusCode, gc.Equals, http.StatusOK)
@@ -371,7 +368,7 @@ func (s *S) TestEd25519(c *gc.C) {
 		res, err := http.Get(s.srv.URL + "/pks/lookup?op=get&search=" + search)
 		comment := gc.Commentf("search=%s", search)
 		c.Assert(err, gc.IsNil, comment)
-		armor, err := ioutil.ReadAll(res.Body)
+		armor, err := io.ReadAll(res.Body)
 		res.Body.Close()
 		c.Assert(err, gc.IsNil, comment)
 		c.Assert(res.StatusCode, gc.Equals, http.StatusOK, comment)
@@ -381,7 +378,6 @@ func (s *S) TestEd25519(c *gc.C) {
 		c.Assert(keys[0].ShortID(), gc.Equals, "e68e311d")
 		c.Assert(keys[0].UserIDs, gc.HasLen, 2)
 		c.Assert(keys[0].UserIDs[0].Keywords, gc.Equals, "Casey Marshall <casey.marshall@canonical.com>")
-		c.Assert(keys[0].Parsed, gc.Equals, true)
 	}
 }
 
@@ -395,7 +391,7 @@ func (s *S) assertKeyNotFound(c *gc.C, fp string) {
 func (s *S) assertKey(c *gc.C, fp, uid string, exist bool) {
 	res, err := http.Get(s.srv.URL + "/pks/lookup?op=get&search=" + fp)
 	c.Assert(err, gc.IsNil)
-	armor, err := ioutil.ReadAll(res.Body)
+	armor, err := io.ReadAll(res.Body)
 	res.Body.Close()
 	c.Assert(err, gc.IsNil)
 	c.Assert(res.StatusCode, gc.Equals, http.StatusOK)
@@ -422,9 +418,9 @@ func (s *S) TestReplace(c *gc.C) {
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "somename", true)
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "forgetme", true)
 
-	keytext, err := ioutil.ReadAll(testing.MustInput("replace.asc"))
+	keytext, err := io.ReadAll(testing.MustInput("replace.asc"))
 	c.Assert(err, gc.IsNil)
-	keysig, err := ioutil.ReadAll(testing.MustInput("replace.asc.asc"))
+	keysig, err := io.ReadAll(testing.MustInput("replace.asc.asc"))
 	c.Assert(err, gc.IsNil)
 	res, err := http.PostForm(s.srv.URL+"/pks/replace", url.Values{
 		"keytext": []string{string(keytext)},
@@ -433,7 +429,7 @@ func (s *S) TestReplace(c *gc.C) {
 	c.Assert(err, gc.IsNil)
 	c.Assert(res.StatusCode, gc.Equals, http.StatusOK)
 	defer res.Body.Close()
-	_, err = ioutil.ReadAll(res.Body)
+	_, err = io.ReadAll(res.Body)
 	c.Assert(err, gc.IsNil)
 
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "somename", true)
@@ -450,7 +446,7 @@ func (s *S) TestReplaceNoSig(c *gc.C) {
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "forgetme", true)
 
 	// Replace without signature gets ignored
-	keytext, err := ioutil.ReadAll(testing.MustInput("replace.asc"))
+	keytext, err := io.ReadAll(testing.MustInput("replace.asc"))
 	c.Assert(err, gc.IsNil)
 	res, err := http.PostForm(s.srv.URL+"/pks/replace", url.Values{
 		"keytext": []string{string(keytext)},
@@ -473,9 +469,9 @@ func (s *S) TestAddDoesntReplace(c *gc.C) {
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "forgetme", true)
 
 	// Signature without replace directive gets ignored
-	keytext, err := ioutil.ReadAll(testing.MustInput("replace.asc"))
+	keytext, err := io.ReadAll(testing.MustInput("replace.asc"))
 	c.Assert(err, gc.IsNil)
-	keysig, err := ioutil.ReadAll(testing.MustInput("replace.asc.asc"))
+	keysig, err := io.ReadAll(testing.MustInput("replace.asc.asc"))
 	c.Assert(err, gc.IsNil)
 	res, err := http.PostForm(s.srv.URL+"/pks/add", url.Values{
 		"keytext": []string{string(keytext)},
@@ -484,7 +480,7 @@ func (s *S) TestAddDoesntReplace(c *gc.C) {
 	c.Assert(err, gc.IsNil)
 	c.Assert(res.StatusCode, gc.Equals, http.StatusOK)
 	defer res.Body.Close()
-	_, err = ioutil.ReadAll(res.Body)
+	_, err = io.ReadAll(res.Body)
 	c.Assert(err, gc.IsNil)
 
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "somename", true)
@@ -501,9 +497,9 @@ func (s *S) TestReplaceNotSelfSig(c *gc.C) {
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "forgetme", true)
 
 	// Signed by a different key than the one replaced
-	keytext, err := ioutil.ReadAll(testing.MustInput("replace_notselfsig.asc"))
+	keytext, err := io.ReadAll(testing.MustInput("replace_notselfsig.asc"))
 	c.Assert(err, gc.IsNil)
-	keysig, err := ioutil.ReadAll(testing.MustInput("replace_notselfsig.asc.asc"))
+	keysig, err := io.ReadAll(testing.MustInput("replace_notselfsig.asc.asc"))
 	c.Assert(err, gc.IsNil)
 	res, err := http.PostForm(s.srv.URL+"/pks/replace", url.Values{
 		"keytext": []string{string(keytext)},
@@ -522,9 +518,9 @@ func (s *S) TestDelete(c *gc.C) {
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "somename", true)
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "forgetme", true)
 
-	keytext, err := ioutil.ReadAll(testing.MustInput("replace.asc"))
+	keytext, err := io.ReadAll(testing.MustInput("replace.asc"))
 	c.Assert(err, gc.IsNil)
-	keysig, err := ioutil.ReadAll(testing.MustInput("replace.asc.asc"))
+	keysig, err := io.ReadAll(testing.MustInput("replace.asc.asc"))
 	c.Assert(err, gc.IsNil)
 
 	values := url.Values{
@@ -550,9 +546,9 @@ func (s *S) TestDeleteNotSelfSig(c *gc.C) {
 	s.assertKey(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC", "forgetme", true)
 
 	// Signed by a different key than the one replaced
-	keytext, err := ioutil.ReadAll(testing.MustInput("replace_notselfsig.asc"))
+	keytext, err := io.ReadAll(testing.MustInput("replace_notselfsig.asc"))
 	c.Assert(err, gc.IsNil)
-	keysig, err := ioutil.ReadAll(testing.MustInput("replace_notselfsig.asc.asc"))
+	keysig, err := io.ReadAll(testing.MustInput("replace_notselfsig.asc.asc"))
 	c.Assert(err, gc.IsNil)
 	res, err := http.PostForm(s.srv.URL+"/pks/delete", url.Values{
 		"keytext": []string{string(keytext)},

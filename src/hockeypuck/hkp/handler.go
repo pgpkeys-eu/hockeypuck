@@ -354,11 +354,6 @@ func (h *Handler) get(w http.ResponseWriter, l *Lookup) {
 		return
 	}
 
-	// Drop malformed packets, since these break GPG imports.
-	for _, key := range keys {
-		openpgp.DropMalformed(key)
-	}
-
 	w.Header().Set("Content-Type", "application/pgp-keys")
 	if l.Options[OptionMachineReadable] {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -521,16 +516,6 @@ func (h *Handler) Add(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 		return
 	}
 	for _, key := range keys {
-		err := openpgp.DropMalformed(key)
-		if err != nil {
-			httpError(w, http.StatusInternalServerError, errors.WithStack(err))
-			return
-		}
-		err = openpgp.DropDuplicates(key)
-		if err != nil {
-			httpError(w, http.StatusInternalServerError, errors.WithStack(err))
-			return
-		}
 		err = openpgp.ValidSelfSigned(key, false)
 		if err != nil {
 			httpError(w, http.StatusInternalServerError, errors.WithStack(err))
@@ -598,16 +583,6 @@ func (h *Handler) Replace(w http.ResponseWriter, r *http.Request, _ httprouter.P
 	for _, key := range keys {
 		if signingFp != key.Fingerprint() {
 			continue
-		}
-		err := openpgp.DropMalformed(key)
-		if err != nil {
-			httpError(w, http.StatusInternalServerError, errors.WithStack(err))
-			return
-		}
-		err = openpgp.DropDuplicates(key)
-		if err != nil {
-			httpError(w, http.StatusInternalServerError, errors.WithStack(err))
-			return
 		}
 		err = openpgp.ValidSelfSigned(key, false)
 		if err != nil {

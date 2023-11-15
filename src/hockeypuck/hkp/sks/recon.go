@@ -479,14 +479,6 @@ func (r *Peer) upsertKeys(rcvr *recon.Recover, buf []byte) (*upsertResult, error
 	}
 	result := &upsertResult{}
 	for _, key := range keys {
-		err := openpgp.DropMalformed(key)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		err = openpgp.DropDuplicates(key)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
 		err = openpgp.ValidSelfSigned(key, false)
 		if err != nil {
 			return nil, errors.WithStack(err)

@@ -20,7 +20,6 @@ package openpgp
 import (
 	"bytes"
 	"crypto/md5"
-	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -51,7 +50,6 @@ type PublicKey struct {
 	BitLen int
 
 	Signatures []*Signature
-	Others     []*Packet
 }
 
 func AlgorithmName(code int) string {
@@ -161,17 +159,6 @@ func (pkp *PublicKey) parse(op *packet.OpaquePacket, subkey bool) error {
 	return errors.WithStack(ErrInvalidPacketType)
 }
 
-func (pkp *PublicKey) setUnsupported(op *packet.OpaquePacket) error {
-	// Calculate opaque fingerprint on unsupported public key packet
-	h := sha1.New()
-	h.Write([]byte{0x99, byte(len(op.Contents) >> 8), byte(len(op.Contents))})
-	h.Write(op.Contents)
-	fpr := hex.EncodeToString(h.Sum(nil))
-	pkp.RFingerprint = Reverse(fpr)
-	pkp.UUID = pkp.RFingerprint
-	return pkp.setV4IDs(pkp.UUID)
-}
-
 func (pkp *PublicKey) setPublicKey(pk *packet.PublicKey) error {
 	buf := bytes.NewBuffer(nil)
 	err := pk.Serialize(buf)
@@ -193,7 +180,6 @@ func (pkp *PublicKey) setPublicKey(pk *packet.PublicKey) error {
 	pkp.Algorithm = int(pk.PubKeyAlgo)
 	pkp.BitLen = int(bitLen)
 	pkp.Version = 4
-	pkp.Parsed = true
 	return nil
 }
 
@@ -231,7 +217,6 @@ func (pkp *PublicKey) setPublicKeyV3(pk *packet.PublicKeyV3) error {
 	pkp.Algorithm = int(pk.PubKeyAlgo)
 	pkp.BitLen = int(bitLen)
 	pkp.Version = 3
-	pkp.Parsed = true
 	return nil
 }
 
@@ -241,9 +226,8 @@ type PrimaryKey struct {
 	MD5    string
 	Length int
 
-	SubKeys        []*SubKey
-	UserIDs        []*UserID
-	UserAttributes []*UserAttribute
+	SubKeys []*SubKey
+	UserIDs []*UserID
 }
 
 // contents implements the packetNode interface for top-level public keys.
@@ -255,14 +239,8 @@ func (pubkey *PrimaryKey) contents() []packetNode {
 	for _, uid := range pubkey.UserIDs {
 		result = append(result, uid.contents()...)
 	}
-	for _, uat := range pubkey.UserAttributes {
-		result = append(result, uat.contents()...)
-	}
 	for _, subkey := range pubkey.SubKeys {
 		result = append(result, subkey.contents()...)
-	}
-	for _, other := range pubkey.Others {
-		result = append(result, other.contents()...)
 	}
 	return result
 }
@@ -288,16 +266,10 @@ func ParsePrimaryKey(op *packet.OpaquePacket) (*PrimaryKey, error) {
 	}
 
 	// Attempt to parse the opaque packet into a public key type.
-	parseErr := pubkey.parse(op, false)
-	if parseErr != nil {
-		err = pubkey.setUnsupported(op)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-	} else {
-		pubkey.Parsed = true
+	err = pubkey.parse(op, false)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
-
 	return pubkey, nil
 }
 
