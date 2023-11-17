@@ -27,7 +27,7 @@ services:
         max-file: "3"
 
   postgres:
-    image: postgres:11
+    image: postgres:${POSTGRES_VERSION:-11}
     restart: always
     environment:
     - POSTGRES_USER
