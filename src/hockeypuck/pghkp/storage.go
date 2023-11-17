@@ -1185,6 +1185,13 @@ func (st *storage) Replace(key *openpgp.PrimaryKey) (_ string, retErr error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
+
+	st.Notify(hkpstorage.KeyReplaced{
+		OldID:     key.KeyID(),
+		OldDigest: md5,
+		NewID:     key.KeyID(),
+		NewDigest: key.MD5,
+	})
 	return md5, nil
 }
 
@@ -1204,6 +1211,7 @@ func (st *storage) Delete(fp string) (_ string, retErr error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
+	st.Notify(hkpstorage.KeyRemoved{ID: fp, Digest: md5})
 	return md5, nil
 }
 
