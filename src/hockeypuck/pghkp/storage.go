@@ -529,7 +529,7 @@ func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
 		}
 		rfpIn = append(rfpIn, "'"+strings.ToLower(rfp)+"'")
 	}
-	sqlStr := fmt.Sprintf("SELECT doc FROM keys WHERE rfingerprint IN (%s)", strings.Join(rfpIn, ","))
+	sqlStr := fmt.Sprintf("SELECT doc, md5 FROM keys WHERE rfingerprint IN (%s)", strings.Join(rfpIn, ","))
 	rows, err := st.Query(sqlStr)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -538,8 +538,8 @@ func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
 	var result []*openpgp.PrimaryKey
 	defer rows.Close()
 	for rows.Next() {
-		var bufStr string
-		err = rows.Scan(&bufStr)
+		var bufStr, sqlMD5 string
+		err = rows.Scan(&bufStr, &sqlMD5)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, errors.WithStack(err)
 		}
@@ -548,6 +548,12 @@ func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		if pk.MD5 != sqlMD5 {
+			// It is possible that the JSON MD5 field does not match the SQL MD5 field
+			// This is harmless in itself since we throw away the JSON field,
+			// but it may be a symptom of problems elsewhere, so log it.
+			log.Warnf("Inconsistent MD5 in database (sql=%s, json=%s), ignoring json", sqlMD5, pk.MD5)
+		}
 
 		rfp := openpgp.Reverse(pk.Fingerprint)
 		key, err := readOneKey(pk.Bytes(), rfp)
@@ -555,10 +561,23 @@ func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
 			return nil, errors.WithStack(err)
 		}
 		if key == nil {
-			log.Errorf("Unparseable key material in database (rfp=%s)", rfp)
-		} else {
-			result = append(result, key)
+			log.Warnf("Unparseable key material in database (md5=%s, fp=%s); deleting", sqlMD5, pk.Fingerprint)
+			_, err = st.Delete(pk.Fingerprint)
+			if err != nil {
+				log.Errorf("Could not delete fp=%s", pk.Fingerprint)
+			}
+			continue
 		}
+		if key.MD5 != sqlMD5 {
+			log.Warnf("MD5 changed while parsing (old=%s new=%s fp=%s); cleaning", sqlMD5, key.MD5, pk.Fingerprint)
+			// BEWARE if we are being called from UpsertKeys this may trigger a double-update
+			// TODO: consider throwing an exception and handling it in the caller
+			err = st.Update(key, key.KeyID(), sqlMD5)
+			if err != nil {
+				log.Errorf("Could not clean fp=%s", pk.Fingerprint)
+			}
+		}
+		result = append(result, key)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -577,7 +596,7 @@ func (st *storage) FetchKeyrings(rfps []string) ([]*hkpstorage.Keyring, error) {
 		}
 		rfpIn = append(rfpIn, "'"+strings.ToLower(rfp)+"'")
 	}
-	sqlStr := fmt.Sprintf("SELECT ctime, mtime, doc FROM keys WHERE rfingerprint IN (%s)", strings.Join(rfpIn, ","))
+	sqlStr := fmt.Sprintf("SELECT doc, md5, ctime, mtime FROM keys WHERE rfingerprint IN (%s)", strings.Join(rfpIn, ","))
 	rows, err := st.Query(sqlStr)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -586,9 +605,9 @@ func (st *storage) FetchKeyrings(rfps []string) ([]*hkpstorage.Keyring, error) {
 	var result []*hkpstorage.Keyring
 	defer rows.Close()
 	for rows.Next() {
-		var bufStr string
+		var bufStr, sqlMD5 string
 		var kr hkpstorage.Keyring
-		err = rows.Scan(&bufStr, &kr.CTime, &kr.MTime)
+		err = rows.Scan(&bufStr, &sqlMD5, &kr.CTime, &kr.MTime)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, errors.WithStack(err)
 		}
@@ -597,6 +616,12 @@ func (st *storage) FetchKeyrings(rfps []string) ([]*hkpstorage.Keyring, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		if pk.MD5 != sqlMD5 {
+			// It is possible that the JSON MD5 field does not match the SQL MD5 field
+			// This is harmless in itself since we throw away the JSON field,
+			// but it may be a symptom of problems elsewhere, so log it.
+			log.Warnf("Inconsistent MD5 in database (sql=%s, json=%s), ignoring json", sqlMD5, pk.MD5)
+		}
 
 		rfp := openpgp.Reverse(pk.Fingerprint)
 		key, err := readOneKey(pk.Bytes(), rfp)
@@ -604,11 +629,24 @@ func (st *storage) FetchKeyrings(rfps []string) ([]*hkpstorage.Keyring, error) {
 			return nil, errors.WithStack(err)
 		}
 		if key == nil {
-			log.Errorf("Unparseable key material in database (rfp=%s)", rfp)
-		} else {
-			kr.PrimaryKey = key
-			result = append(result, &kr)
+			log.Warnf("Unparseable key material in database (fp=%s); deleting", pk.Fingerprint)
+			_, err = st.Delete(pk.Fingerprint)
+			if err != nil {
+				log.Errorf("Could not delete fp=%s", pk.Fingerprint)
+			}
+			continue
 		}
+		if key.MD5 != sqlMD5 {
+			log.Warnf("MD5 changed while parsing (old=%s new=%s fp=%s); cleaning", sqlMD5, key.MD5, pk.Fingerprint)
+			// BEWARE if we are being called from UpsertKeys this may trigger a double-update
+			// TODO: consider throwing an exception and handling it in the caller
+			err = st.Update(key, key.KeyID(), sqlMD5)
+			if err != nil {
+				log.Errorf("Could not clean fp=%s", pk.Fingerprint)
+			}
+		}
+		kr.PrimaryKey = key
+		result = append(result, &kr)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -1389,8 +1427,10 @@ func (st *storage) Notify(change hkpstorage.KeyChange) error {
 	defer st.mu.Unlock()
 	log.Debugf("%v", change)
 	for _, f := range st.listeners {
-		// TODO: log error notifying listener?
-		f(change)
+		err := f(change)
+		if err != nil {
+			log.Errorf("notify failed: %v", err)
+		}
 	}
 	return nil
 }

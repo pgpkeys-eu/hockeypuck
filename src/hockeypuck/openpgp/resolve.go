@@ -32,11 +32,15 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 	for _, cert := range ss.Revocations {
 		if cert.Error == nil {
 			certs = append(certs, cert.Signature)
+		} else {
+			log.Debugf("Dropped direct revocation sig because %s", cert.Error.Error())
 		}
 	}
 	for _, cert := range ss.Certifications {
 		if cert.Error == nil {
 			certs = append(certs, cert.Signature)
+		} else {
+			log.Debugf("Dropped direct certification sig because %s", cert.Error.Error())
 		}
 	}
 	key.Signatures = certs
