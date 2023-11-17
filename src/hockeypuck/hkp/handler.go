@@ -358,7 +358,7 @@ func (h *Handler) get(w http.ResponseWriter, l *Lookup) {
 	if l.Options[OptionMachineReadable] {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 	} else {
-		w.Header().Set("Content-Disposition", "attachment; filename=\"armored-keys.asc\"")
+		w.Header().Set("Content-Disposition", "attachment; filename=\""+keys[0].Fingerprint()+".asc\"")
 	}
 
 	err = openpgp.WriteArmoredPackets(w, keys, h.keyWriterOptions...)
