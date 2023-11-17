@@ -154,6 +154,7 @@ func NewServer(settings *Settings) (*Server, error) {
 		hkp.FingerprintOnly(settings.HKP.Queries.FingerprintOnly),
 		hkp.KeyReaderOptions(keyReaderOptions),
 		hkp.KeyWriterOptions(keyWriterOptions),
+		hkp.AdminKeys(settings.AdminKeys),
 	}
 	if settings.IndexTemplate != "" {
 		options = append(options, hkp.IndexTemplate(settings.IndexTemplate))

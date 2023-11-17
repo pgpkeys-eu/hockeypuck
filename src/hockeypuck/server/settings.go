@@ -200,7 +200,8 @@ type Settings struct {
 	Version      string
 	BuiltAt      string
 
-	MaxResponseLen int `toml:"maxResponseLen"`
+	MaxResponseLen int      `toml:"maxResponseLen"`
+	AdminKeys      []string `toml:"adminKeys"`
 }
 
 const (
@@ -237,6 +238,7 @@ func DefaultSettings() Settings {
 		Version:        Version,
 		BuiltAt:        BuiltAt,
 		MaxResponseLen: DefaultMaxResponseLen,
+		AdminKeys:      []string{},
 	}
 }
 

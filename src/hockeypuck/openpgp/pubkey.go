@@ -84,7 +84,7 @@ func AlgorithmName(code int) string {
 }
 
 func (pk *PublicKey) QualifiedFingerprint() string {
-	return fmt.Sprintf("%s%d/%s", AlgorithmName(pk.Algorithm), pk.BitLen, Reverse(pk.RFingerprint))
+	return fmt.Sprintf("(%d)%s%d/%s", pk.Version, AlgorithmName(pk.Algorithm), pk.BitLen, Reverse(pk.RFingerprint))
 }
 
 func (pk *PublicKey) ShortID() string {
