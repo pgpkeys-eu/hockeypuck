@@ -108,7 +108,7 @@ func (subkey *SubKey) SigInfo(pubkey *PrimaryKey) (*SelfSigs, []*Signature) {
 		checkSig := &CheckSig{
 			PrimaryKey: pubkey,
 			Signature:  sig,
-			Error:      pubkey.verifyPublicKeySelfSig(&subkey.PublicKey, sig),
+			Error:      pubkey.verifySubKeySelfSig(&subkey.PublicKey, sig),
 		}
 		if checkSig.Error != nil {
 			selfSigs.Errors = append(selfSigs.Errors, checkSig)

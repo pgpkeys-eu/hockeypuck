@@ -327,15 +327,17 @@ func (pubkey *PrimaryKey) SigInfo() (*SelfSigs, []*Signature) {
 		checkSig := &CheckSig{
 			PrimaryKey: pubkey,
 			Signature:  sig,
-			Error:      pubkey.verifyPublicKeySelfSig(&pubkey.PublicKey, sig),
+			Error:      pubkey.verifyPrimaryKeySelfSig(sig),
 		}
 		if checkSig.Error != nil {
 			selfSigs.Errors = append(selfSigs.Errors, checkSig)
 			continue
 		}
 		switch sig.SigType {
-		case 0x20: // packet.SigTypeKeyRevocation
+		case packet.SigTypeKeyRevocation:
 			selfSigs.Revocations = append(selfSigs.Revocations, checkSig)
+		case packet.SigTypeDirectSignature:
+			selfSigs.Certifications = append(selfSigs.Certifications, checkSig)
 		}
 	}
 	selfSigs.resolve()

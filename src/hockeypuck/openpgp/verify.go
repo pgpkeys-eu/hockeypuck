@@ -25,12 +25,42 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (pubkey *PrimaryKey) verifyPublicKeySelfSig(signed *PublicKey, sig *Signature) error {
+func (pubkey *PrimaryKey) verifyPrimaryKeySelfSig(sig *Signature) error {
 	pkOpaque, err := pubkey.opaquePacket()
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	pkParsed, _ := pkOpaque.Parse()
+	pkParsed, err := pkOpaque.Parse()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	switch pk := pkParsed.(type) {
+	case *packet.PublicKey:
+		s, err := sig.signaturePacket()
+		if err != nil {
+			return ErrInvalidPacketType
+		}
+		switch s.SigType {
+		// v4 primary keys can have direct certifications, but gopenpgp doesn't support them (yet?)
+		case packet.SigTypeKeyRevocation:
+			return errors.WithStack(pk.VerifyRevocationSignature(s))
+		}
+	case *packet.PublicKeyV3:
+		// v3 primary keys can have revocation sigs, but gopenpgp doesn't support them
+		return errors.WithStack(ErrInvalidPacketType)
+	}
+	return ErrInvalidPacketType
+}
+
+func (pubkey *PrimaryKey) verifySubKeySelfSig(signed *PublicKey, sig *Signature) error {
+	pkOpaque, err := pubkey.opaquePacket()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	pkParsed, err := pkOpaque.Parse()
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	switch pk := pkParsed.(type) {
 	case *packet.PublicKey:
 		signedPk, err := signed.publicKeyPacket()
@@ -74,6 +104,9 @@ func (pubkey *PrimaryKey) verifyUserIDSelfSig(uid *UserID, sig *Signature) error
 		return errors.WithStack(err)
 	}
 	pkParsed, err := pkOpaque.Parse()
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	switch pk := pkParsed.(type) {
 	case *packet.PublicKey:
 		sOpaque, err := sig.opaquePacket()
