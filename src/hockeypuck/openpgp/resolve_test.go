@@ -239,8 +239,10 @@ func (s *ResolveSuite) TestResolveRootSignatures(c *gc.C) {
 	key2 := MustInputAscKey("test-key-revoked.asc")
 	c.Assert(key1.Signatures, gc.HasLen, 0)
 	c.Assert(key2.Signatures, gc.HasLen, 1)
+	err := ValidSelfSigned(key2, false) // This should drop the UIDs on key2 due to the hard revocation
+	c.Assert(err, gc.IsNil)
 	c.Assert(key1.MD5, gc.Not(gc.Equals), key2.MD5)
-	Merge(key1, key2)
+	Merge(key1, key2) // This will drop the UIDs on key1
 	c.Assert(key1.MD5, gc.Equals, key2.MD5)
 	c.Assert(key1.Signatures, gc.HasLen, 1)
 	c.Assert(key2.Signatures, gc.HasLen, 1)
@@ -258,4 +260,38 @@ func (s *ResolveSuite) TestMergeRevocationSig(c *gc.C) {
 	c.Assert(err, gc.IsNil)
 	MergeRevocationSig(key, sig)
 	c.Assert(key.Signatures, gc.HasLen, 1)
+	c.Assert(key.UserIDs, gc.HasLen, 0) // The UID should be dropped due to the hard revocation
+}
+
+func (s *ResolveSuite) TestMergeWrongRevocationSig(c *gc.C) {
+	key := MustInputAscKey("test-key.asc")
+	armorBlock, err := armor.Decode(testing.MustInput("test-rtbf-revoke.asc"))
+	c.Assert(err, gc.IsNil)
+	okr, err := NewOpaqueKeyReader(armorBlock.Body)
+	c.Assert(err, gc.IsNil)
+	keyrings, err := okr.Read()
+	c.Assert(err, gc.IsNil)
+	c.Assert(key.Signatures, gc.HasLen, 0)
+	sig, err := ParseSignature(keyrings[0].Packets[0], time.Now(), "", "")
+	c.Assert(err, gc.IsNil)
+	MergeRevocationSig(key, sig)
+	c.Assert(key.Signatures, gc.HasLen, 1) // wrong revocation is treated as a third-party sig and not validated
+	c.Assert(key.UserIDs, gc.HasLen, 1)
+}
+
+func (s *ResolveSuite) TestMergeHardRevocationSig(c *gc.C) {
+	key := MustInputAscKey("test-rtbf.asc")
+	armorBlock, err := armor.Decode(testing.MustInput("test-rtbf-revoke.asc"))
+	c.Assert(err, gc.IsNil)
+	okr, err := NewOpaqueKeyReader(armorBlock.Body)
+	c.Assert(err, gc.IsNil)
+	keyrings, err := okr.Read()
+	c.Assert(err, gc.IsNil)
+	c.Assert(key.Signatures, gc.HasLen, 0)
+	sig, err := ParseSignature(keyrings[0].Packets[0], time.Now(), "", "")
+	c.Assert(err, gc.IsNil)
+	c.Assert(*sig.RevocationReason, gc.Equals, packet.KeyCompromised)
+	MergeRevocationSig(key, sig)
+	c.Assert(key.Signatures, gc.HasLen, 1)
+	c.Assert(key.UserIDs, gc.HasLen, 0)
 }

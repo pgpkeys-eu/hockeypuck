@@ -30,11 +30,12 @@ import (
 type Signature struct {
 	Packet
 
-	SigType      int
-	RIssuerKeyID string
-	Creation     time.Time
-	Expiration   time.Time
-	Primary      bool
+	SigType          int
+	RIssuerKeyID     string
+	Creation         time.Time
+	Expiration       time.Time
+	Primary          bool
+	RevocationReason *packet.ReasonForRevocation
 }
 
 const sigTag = "{sig}"
@@ -116,6 +117,7 @@ func (sig *Signature) setSignature(s *packet.Signature, keyCreationTime time.Tim
 	}
 	sig.Creation = s.CreationTime
 	sig.SigType = int(s.SigType)
+	sig.RevocationReason = s.RevocationReason
 
 	// Extract the issuer key id
 	var issuerKeyId [8]byte

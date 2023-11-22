@@ -86,7 +86,7 @@ var sksDefaultFilters = []string{
 	"drop:unparseable",         // unparseable packets are dropped
 	"drop:unboundChild",        // UIDs, subkeys with no valid self-sigs are dropped
 	"drop:UAT",                 // no longer supported
-	"drop:UIDOnHardRevoke",     // hard direct revocation causes all UIDs to be dropped (HIP-5)
+	"drop:hardRevokedCruft",    // hard direct revocation causes all UIDs and third-party direct sigs to be dropped (HIP-5)
 }
 
 func NewPrefixTree(path string, s *recon.Settings) (recon.PrefixTree, error) {

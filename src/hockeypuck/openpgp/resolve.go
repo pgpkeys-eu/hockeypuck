@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	log "hockeypuck/logrus"
 
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/pkg/errors"
 )
 
@@ -29,9 +30,21 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 	// Process direct signatures first
 	ss, others := key.SigInfo()
 	var certs []*Signature
+	keepUIDs := true
+	for _, cert := range ss.Errors {
+		log.Debugf("Dropped direct sig because %s", cert.Error)
+	}
 	for _, cert := range ss.Revocations {
 		if cert.Error == nil {
 			certs = append(certs, cert.Signature)
+			// RevocationReasons of nil, NoReason and KeyCompromised are considered hard,
+			// i.e. they render a key retrospectively unusable. (HIP-5)
+			// TODO: include the soft reason UIDNoLongerValid after we implement HIP-4
+			if cert.Signature.RevocationReason == nil || *cert.Signature.RevocationReason == packet.NoReason || *cert.Signature.RevocationReason == packet.KeyCompromised {
+				log.Debugf("Dropping UIDs and third-party sigs on %s due to direct hard revocation (%d)", key.KeyID(), cert.Signature.RevocationReason)
+				keepUIDs = false
+				selfSignedOnly = true
+			}
 		} else {
 			log.Debugf("Dropped direct revocation sig because %s", cert.Error.Error())
 		}
@@ -49,31 +62,33 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 	}
 	var userIDs []*UserID
 	var subKeys []*SubKey
-	for _, uid := range key.UserIDs {
-		ss, others := uid.SigInfo(key)
-		var certs []*Signature
-		for _, cert := range ss.Revocations {
-			if cert.Error == nil {
-				certs = append(certs, cert.Signature)
+	if keepUIDs {
+		for _, uid := range key.UserIDs {
+			ss, others := uid.SigInfo(key)
+			var certs []*Signature
+			for _, cert := range ss.Revocations {
+				if cert.Error == nil {
+					certs = append(certs, cert.Signature)
+				} else {
+					log.Debugf("Dropped revocation sig on uid '%s' because %s", uid.Keywords, cert.Error.Error())
+				}
+			}
+			for _, cert := range ss.Certifications {
+				if cert.Error == nil {
+					certs = append(certs, cert.Signature)
+				} else {
+					log.Debugf("Dropped certification sig on uid '%s' because %s", uid.Keywords, cert.Error.Error())
+				}
+			}
+			if len(certs) > 0 {
+				uid.Signatures = certs
+				if !selfSignedOnly {
+					uid.Signatures = append(uid.Signatures, others...)
+				}
+				userIDs = append(userIDs, uid)
 			} else {
-				log.Debugf("Dropped revocation sig on uid '%s' because %s", uid.Keywords, cert.Error.Error())
+				log.Debugf("Dropped uid '%s' because no valid self-sigs", uid.Keywords)
 			}
-		}
-		for _, cert := range ss.Certifications {
-			if cert.Error == nil {
-				certs = append(certs, cert.Signature)
-			} else {
-				log.Debugf("Dropped certification sig on uid '%s' because %s", uid.Keywords, cert.Error.Error())
-			}
-		}
-		if len(certs) > 0 {
-			uid.Signatures = certs
-			if !selfSignedOnly {
-				uid.Signatures = append(uid.Signatures, others...)
-			}
-			userIDs = append(userIDs, uid)
-		} else {
-			log.Debugf("Dropped uid '%s' because no valid self-sigs", uid.Keywords)
 		}
 	}
 	for _, subKey := range key.SubKeys {
@@ -96,6 +111,8 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 		if len(certs) > 0 {
 			subKey.Signatures = certs
 			if !selfSignedOnly {
+				// TODO?: there is a valid use case for third party key revocation sigs on subkeys,
+				// but third-party sbinds are worthless and could be dropped (#279)
 				subKey.Signatures = append(subKey.Signatures, others...)
 			}
 			subKeys = append(subKeys, subKey)
