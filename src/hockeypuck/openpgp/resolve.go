@@ -39,11 +39,9 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 			certs = append(certs, cert.Signature)
 		}
 	}
-	if len(certs) > 0 {
-		key.Signatures = certs
-		if !selfSignedOnly {
-			key.Signatures = append(key.Signatures, others...)
-		}
+	key.Signatures = certs
+	if !selfSignedOnly {
+		key.Signatures = append(key.Signatures, others...)
 	}
 	var userIDs []*UserID
 	var userAttributes []*UserAttribute
