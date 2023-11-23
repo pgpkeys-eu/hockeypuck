@@ -34,8 +34,8 @@ import (
 	"gopkg.in/basen.v1"
 )
 
-var ErrInvalidPacketType error = fmt.Errorf("Invalid packet type")
-var ErrPacketRecordState error = fmt.Errorf("Packet record state has not been properly initialized")
+var ErrInvalidPacketType error = fmt.Errorf("invalid packet type")
+var ErrPacketRecordState error = fmt.Errorf("packet record state has not been properly initialized")
 
 type Packet struct {
 

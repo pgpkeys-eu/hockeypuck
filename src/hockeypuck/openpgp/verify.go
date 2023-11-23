@@ -37,19 +37,34 @@ func (pubkey *PrimaryKey) verifyPrimaryKeySelfSig(sig *Signature) error {
 	switch pk := pkParsed.(type) {
 	case *packet.PublicKey:
 		s, err := sig.signaturePacket()
-		if err != nil {
-			return ErrInvalidPacketType
+		if err == nil {
+			switch s.SigType {
+			case packet.SigTypeKeyRevocation:
+				return errors.WithStack(pk.VerifyRevocationSignature(s))
+			case packet.SigTypeDirectSignature:
+				// v4 primary keys can have direct certifications, but gopenpgp can't verify them
+				// Therefore always treat them as valid
+				return nil
+			}
 		}
-		switch s.SigType {
-		// v4 primary keys can have direct certifications, but gopenpgp doesn't support them (yet?)
-		case packet.SigTypeKeyRevocation:
-			return errors.WithStack(pk.VerifyRevocationSignature(s))
+		// v4 keys can also make v3 direct sigs over themselves
+		s3, err3 := sig.signatureV3Packet()
+		if err3 != nil {
+			// return the earlier error
+			return errors.WithStack(err)
+		}
+		// v4 primary keys can have v3 direct revocations, but gopenpgp can't verify them
+		// Therefore always treat them as valid (so the key always appears to be revoked)
+		// Note: v3 sigs can't have subpackets, so v3 revocations have no ReasonForRevocation
+		if pk.Version == 4 && s3.SigType == packet.SigTypeKeyRevocation {
+			return nil
 		}
 	case *packet.PublicKeyV3:
-		// v3 primary keys can have revocation sigs, but gopenpgp doesn't support them
-		return errors.WithStack(ErrInvalidPacketType)
+		// v3 primary keys can have revocation sigs, but gopenpgp can't verify them
+		// Therefore always treat them as valid
+		return nil
 	}
-	return ErrInvalidPacketType
+	return errors.WithStack(ErrInvalidPacketType)
 }
 
 func (pubkey *PrimaryKey) verifySubKeySelfSig(signed *PublicKey, sig *Signature) error {
@@ -72,8 +87,9 @@ func (pubkey *PrimaryKey) verifySubKeySelfSig(signed *PublicKey, sig *Signature)
 			return errors.WithStack(pk.VerifyKeySignature(signedPk, s))
 		}
 		// v4 keys can also make v3 sigs over v4 encryption subkeys
-		s3, err := sig.signatureV3Packet()
-		if err != nil {
+		s3, err3 := sig.signatureV3Packet()
+		if err3 != nil {
+			// return the earlier error
 			return errors.WithStack(err)
 		}
 		if signedPk.Version == 4 {
@@ -90,7 +106,7 @@ func (pubkey *PrimaryKey) verifySubKeySelfSig(signed *PublicKey, sig *Signature)
 		}
 		return errors.WithStack(pk.VerifyKeySignatureV3(signedPk, s))
 	}
-	return ErrInvalidPacketType
+	return errors.WithStack(ErrInvalidPacketType)
 }
 
 func (pubkey *PrimaryKey) verifyUserIDSelfSig(uid *UserID, sig *Signature) error {

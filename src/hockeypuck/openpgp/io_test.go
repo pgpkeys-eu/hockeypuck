@@ -287,6 +287,17 @@ func (s *SamplePacketSuite) TestECCSelfSigs(c *gc.C) {
 	}
 }
 
+func (s *SamplePacketSuite) TestPrimarySelfSigs(c *gc.C) {
+	key := MustInputAscKey("a567ba067-anon.asc")
+	ss, _ := key.SigInfo()
+	c.Assert(ss.Errors, gc.HasLen, 0)
+	c.Assert(ss.Certifications, gc.HasLen, 3)
+	c.Assert(ss.Revocations, gc.HasLen, 1)
+	// note that the key has been revoked, but we can't test the revocation sig
+	// so we *assume* the revocation is genuine, and the key is therefore not valid
+	c.Assert(ss.Valid(), gc.Equals, false)
+}
+
 func (s *SamplePacketSuite) TestMaxKeyLen(c *gc.C) {
 	keys, err := ReadArmorKeys(testing.MustInput("e68e311d.asc"))
 	c.Assert(err, gc.IsNil)

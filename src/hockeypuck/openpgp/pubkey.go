@@ -147,12 +147,12 @@ func (pkp *PublicKey) parse(op *packet.OpaquePacket, subkey bool) error {
 	switch pk := p.(type) {
 	case *packet.PublicKey:
 		if pk.IsSubkey != subkey {
-			return ErrInvalidPacketType
+			return errors.WithStack(ErrInvalidPacketType)
 		}
 		return pkp.setPublicKey(pk)
 	case *packet.PublicKeyV3:
 		if pk.IsSubkey != subkey {
-			return ErrInvalidPacketType
+			return errors.WithStack(ErrInvalidPacketType)
 		}
 		return pkp.setPublicKeyV3(pk)
 	default:

@@ -102,7 +102,7 @@ func ParseUserID(op *packet.OpaquePacket, parentID string) (*UserID, error) {
 
 	u, ok := p.(*packet.UserId)
 	if !ok {
-		return nil, ErrInvalidPacketType
+		return nil, errors.WithStack(ErrInvalidPacketType)
 	}
 	err = uid.setUserID(u)
 	if err != nil {
