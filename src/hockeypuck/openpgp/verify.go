@@ -42,10 +42,10 @@ func (pubkey *PrimaryKey) verifyPrimaryKeySelfSig(sig *Signature) error {
 			case packet.SigTypeKeyRevocation:
 				return errors.WithStack(pk.VerifyRevocationSignature(s))
 			case packet.SigTypeDirectSignature:
-				// v4 primary keys can have direct certifications, but gopenpgp can't verify them
-				// Therefore always treat them as valid
-				return nil
+				// VerifyRevocationSignature verifies *any* direct sig, despite the name
+				return errors.WithStack(pk.VerifyRevocationSignature(s))
 			}
+			return errors.WithStack(ErrInvalidPacketType)
 		}
 		// v4 keys can also make v3 direct sigs over themselves
 		s3, err3 := sig.signatureV3Packet()
