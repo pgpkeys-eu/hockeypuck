@@ -95,7 +95,11 @@ func (subkey *SubKey) SigInfo(pubkey *PrimaryKey) (*SelfSigs, []*Signature) {
 	for _, sig := range subkey.Signatures {
 		// Skip non-self-certifications.
 		if !strings.HasPrefix(pubkey.UUID, sig.RIssuerKeyID) {
-			otherSigs = append(otherSigs, sig)
+			switch sig.SigType {
+			// NB: third-party SubkeyBinding sigs are meaningless
+			case packet.SigTypeSubkeyRevocation:
+				otherSigs = append(otherSigs, sig)
+			}
 			continue
 		}
 		checkSig := &CheckSig{
@@ -108,9 +112,9 @@ func (subkey *SubKey) SigInfo(pubkey *PrimaryKey) (*SelfSigs, []*Signature) {
 			continue
 		}
 		switch sig.SigType {
-		case 0x28: // packet.SigTypeSubKeyRevocation
+		case packet.SigTypeSubkeyRevocation:
 			selfSigs.Revocations = append(selfSigs.Revocations, checkSig)
-		case 0x18: // packet.SigTypeSubKeyBinding
+		case packet.SigTypeSubkeyBinding:
 			selfSigs.Certifications = append(selfSigs.Certifications, checkSig)
 			if !sig.Expiration.IsZero() {
 				selfSigs.Expirations = append(selfSigs.Expirations, checkSig)

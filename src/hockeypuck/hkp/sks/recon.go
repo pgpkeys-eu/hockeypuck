@@ -72,21 +72,21 @@ type Peer struct {
 	t tomb.Tomb
 }
 
-// sksDefaultFilters describe the dataset normalisations applied by hockeypuck.
+// sksDefaultFilters describe the dataset properties enforced by hockeypuck.
 // These must match the running code, so are always added to the Filters in the Conflux configuration.
 // Conflux Filters are used to further restrict sync, e.g. to disconnect test nodes from production.
 // TODO: how to capture supported algorithms? Defer to gopenpgp versioning?
 var sksDefaultFilters = []string{
-	"schema:io.hockeypuck.sks", // declare our filter schema
-	"yminsky.merge",            // keys are merged
-	"yminsky.dedup",            // packets are deduplicated on disk
-	"sksDigest.dedup",          // packets are deduplicated in sksDigest
-	"versions:34",              // no v5 or 6 yet
-	"drop:invalidSelfSig",      // self-signatures are validated
-	"drop:unparseable",         // unparseable packets are dropped
-	"drop:unboundChild",        // UIDs, subkeys with no valid self-sigs are dropped
-	"drop:UAT",                 // no longer supported
-	"drop:hardRevokedCruft",    // hard direct revocation causes all UIDs and third-party direct sigs to be dropped (HIP-5)
+	"schema:application/pgp-keys", // declare our dataset
+	"yminsky.merge",               // TPKs with same primary key are merged
+	"yminsky.dedup",               // packets are deduplicated on disk
+	"versions:34",                 // no v5 or 6 yet
+	"drop:invalidSelfSig",         // self-signatures are validated
+	"drop:unparseable",            // unparseable packets are dropped
+	"drop:structuralMartian",      // signatures in an impossible place (according to SigType) are dropped
+	"drop:unbound",                // UIDs, subkeys with no valid self-sigs are dropped
+	"drop:UAT",                    // no longer supported
+	"drop:hardRevokedCruft",       // hard direct revocation causes all UIDs and third-party sigs to be dropped (HIP-5)
 }
 
 func NewPrefixTree(path string, s *recon.Settings) (recon.PrefixTree, error) {

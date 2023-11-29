@@ -33,6 +33,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/pkg/errors"
+	"golang.org/x/exp/slices"
 
 	log "hockeypuck/logrus"
 )
@@ -368,15 +369,24 @@ func SksDigest(key *PrimaryKey, h hash.Hash) (string, error) {
 	if len(packets) == 0 {
 		return fail, errors.New("no packets found")
 	}
-	return sksDigestOpaque(packets, h), nil
+	return sksDigestOpaque(packets, h, key.Fingerprint()), nil
 }
 
-func sksDigestOpaque(packets []*packet.OpaquePacket, h hash.Hash) string {
+func sksDigestOpaque(packets []*packet.OpaquePacket, h hash.Hash, fp string) string {
 	sort.Sort(opaquePacketSlice(packets))
+	prevOpkt := &packet.OpaquePacket{}
 	for _, opkt := range packets {
+		if slices.Compare(opkt.Contents, prevOpkt.Contents) == 0 {
+			log.WithFields(log.Fields{
+				"fp":     fp,
+				"length": len(opkt.Contents),
+				"type":   opkt.Tag,
+			}).Warn("duplicate packet found while calculating sksDigest")
+		}
 		binary.Write(h, binary.BigEndian, int32(opkt.Tag))
 		binary.Write(h, binary.BigEndian, int32(len(opkt.Contents)))
 		h.Write(opkt.Contents)
+		prevOpkt = opkt
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }

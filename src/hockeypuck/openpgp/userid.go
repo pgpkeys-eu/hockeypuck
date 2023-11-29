@@ -147,7 +147,10 @@ func (uid *UserID) SigInfo(pubkey *PrimaryKey) (*SelfSigs, []*Signature) {
 	for _, sig := range uid.Signatures {
 		// Skip non-self-certifications.
 		if !strings.HasPrefix(pubkey.UUID, sig.RIssuerKeyID) {
-			otherSigs = append(otherSigs, sig)
+			switch sig.SigType {
+			case packet.SigTypeCertificationRevocation, packet.SigTypeGenericCert, packet.SigTypePersonaCert, packet.SigTypeCasualCert, packet.SigTypePositiveCert:
+				otherSigs = append(otherSigs, sig)
+			}
 			continue
 		}
 		checkSig := &CheckSig{
@@ -160,9 +163,9 @@ func (uid *UserID) SigInfo(pubkey *PrimaryKey) (*SelfSigs, []*Signature) {
 			continue
 		}
 		switch sig.SigType {
-		case 0x30: // packet.SigTypeCertRevocation
+		case packet.SigTypeCertificationRevocation:
 			selfSigs.Revocations = append(selfSigs.Revocations, checkSig)
-		case 0x10, 0x11, 0x12, 0x13:
+		case packet.SigTypeGenericCert, packet.SigTypePersonaCert, packet.SigTypeCasualCert, packet.SigTypePositiveCert:
 			selfSigs.Certifications = append(selfSigs.Certifications, checkSig)
 			if !sig.Expiration.IsZero() {
 				selfSigs.Expirations = append(selfSigs.Expirations, checkSig)

@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NB: this is a misnomer, as it also enforces the structural correctness (only!) of third-party sigs
 func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 	// Process direct signatures first
 	ss, others := key.SigInfo()
@@ -111,8 +112,6 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 		if len(certs) > 0 {
 			subKey.Signatures = certs
 			if !selfSignedOnly {
-				// TODO?: there is a valid use case for third party key revocation sigs on subkeys,
-				// but third-party sbinds are worthless and could be dropped (#279)
 				subKey.Signatures = append(subKey.Signatures, others...)
 			}
 			subKeys = append(subKeys, subKey)

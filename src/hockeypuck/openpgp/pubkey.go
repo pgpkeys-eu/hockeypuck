@@ -293,7 +293,10 @@ func (pubkey *PrimaryKey) SigInfo() (*SelfSigs, []*Signature) {
 	for _, sig := range pubkey.Signatures {
 		// Skip non-self-certifications.
 		if !strings.HasPrefix(pubkey.UUID, sig.RIssuerKeyID) {
-			otherSigs = append(otherSigs, sig)
+			switch sig.SigType {
+			case packet.SigTypeKeyRevocation, packet.SigTypeDirectSignature:
+				otherSigs = append(otherSigs, sig)
+			}
 			continue
 		}
 		checkSig := &CheckSig{

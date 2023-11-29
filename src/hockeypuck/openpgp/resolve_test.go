@@ -57,7 +57,8 @@ func (s *ResolveSuite) TestDupSigSksDigest(c *gc.C) {
 			c.Log("raw:", op)
 		}
 	}
-	sksDigest := sksDigestOpaque(packets, md5.New())
+	sksDigest := sksDigestOpaque(packets, md5.New(), "testing")
+	// c.Assert(sksDigest, gc.Equals, "ba693a2769fffc68afd3a22fd5b4bdd6") // This is the value to expect once we fix #283
 	c.Assert(sksDigest, gc.Equals, "6d57b48c83d6322076d634059bb3b94b")
 }
 
@@ -112,14 +113,10 @@ func (s *ResolveSuite) TestKeyExpiration(c *gc.C) {
 	Sort(key)
 
 	c.Assert(key.SubKeys, gc.HasLen, 7)
-	// NB the subkey expiry date offset fix (#140) has changed the subkey
-	// sort order. We suspected that sorting was broken, but it's not clear
-	// whether we have also now fixed sorting, or just mangled it further.
-	// (the commented-out subkeys are now in positions [2] and [3])
-	//	c.Assert(key.SubKeys[0].UUID, gc.Equals, "d8f5df37774835db9035533c5e42d67d9db4afd4")
-	//	c.Assert(key.SubKeys[1].UUID, gc.Equals, "b416d58b79836874f1bae9cec6d402ff30597109")
 	c.Assert(key.SubKeys[0].UUID, gc.Equals, "6c949d8098859e7816e6b33d54d50118a1b8dfc9")
 	c.Assert(key.SubKeys[1].UUID, gc.Equals, "3745e9590264de539613d833ad83b9366e3d6be3")
+	c.Assert(key.SubKeys[2].UUID, gc.Equals, "d8f5df37774835db9035533c5e42d67d9db4afd4")
+	c.Assert(key.SubKeys[3].UUID, gc.Equals, "b416d58b79836874f1bae9cec6d402ff30597109")
 }
 
 // TestUnsuppIgnored tests parsing key material containing
@@ -131,6 +128,17 @@ func (s *ResolveSuite) TestUnsuppIgnored(c *gc.C) {
 	c.Assert(keys, gc.HasLen, 1)
 	key := keys[0]
 	c.Assert(key, gc.NotNil)
+}
+
+// There is a martian third-party 0x13 signature on the encryption subkey
+// This is obviously lost, so it should be dropped
+func (s *ResolveSuite) TestMartiansDropped(c *gc.C) {
+	key := MustInputAscKey("martian.asc")
+	c.Assert(key, gc.NotNil)
+	err := ValidSelfSigned(key, false)
+	c.Assert(err, gc.IsNil)
+	c.Assert(key.SubKeys, gc.HasLen, 1)
+	c.Assert(key.SubKeys[0].Signatures, gc.HasLen, 1)
 }
 
 func (s *ResolveSuite) TestMissingUidFk(c *gc.C) {
