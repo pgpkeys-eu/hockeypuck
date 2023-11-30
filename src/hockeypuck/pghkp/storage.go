@@ -31,6 +31,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
+	"golang.org/x/exp/slices"
 
 	"hockeypuck/hkp/jsonhkp"
 	hkpstorage "hockeypuck/hkp/storage"
@@ -516,7 +517,8 @@ func (st *storage) ModifiedSince(t time.Time) ([]string, error) {
 	return result, nil
 }
 
-func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
+func (st *storage) FetchKeys(rfps []string, options ...string) ([]*openpgp.PrimaryKey, error) {
+	autoPreen := slices.Contains(options, hkpstorage.AutoPreen)
 	if len(rfps) == 0 {
 		return nil, nil
 	}
@@ -560,7 +562,7 @@ func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		if key == nil {
+		if key == nil && autoPreen {
 			log.Warnf("Unparseable key material in database (md5=%s, fp=%s); deleting", sqlMD5, pk.Fingerprint)
 			_, err = st.Delete(pk.Fingerprint)
 			if err != nil {
@@ -568,10 +570,8 @@ func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
 			}
 			continue
 		}
-		if key.MD5 != sqlMD5 {
+		if key.MD5 != sqlMD5 && autoPreen {
 			log.Warnf("MD5 changed while parsing (old=%s new=%s fp=%s); cleaning", sqlMD5, key.MD5, pk.Fingerprint)
-			// BEWARE if we are being called from UpsertKeys this may trigger a double-update
-			// TODO: consider throwing an exception and handling it in the caller
 			err = st.Update(key, key.KeyID(), sqlMD5)
 			if err != nil {
 				log.Errorf("Could not clean fp=%s", pk.Fingerprint)
@@ -587,7 +587,8 @@ func (st *storage) FetchKeys(rfps []string) ([]*openpgp.PrimaryKey, error) {
 	return result, nil
 }
 
-func (st *storage) FetchKeyrings(rfps []string) ([]*hkpstorage.Keyring, error) {
+func (st *storage) FetchKeyrings(rfps []string, options ...string) ([]*hkpstorage.Keyring, error) {
+	autoPreen := slices.Contains(options, hkpstorage.AutoPreen)
 	var rfpIn []string
 	for _, rfp := range rfps {
 		_, err := hex.DecodeString(rfp)
@@ -628,7 +629,7 @@ func (st *storage) FetchKeyrings(rfps []string) ([]*hkpstorage.Keyring, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		if key == nil {
+		if key == nil && autoPreen {
 			log.Warnf("Unparseable key material in database (fp=%s); deleting", pk.Fingerprint)
 			_, err = st.Delete(pk.Fingerprint)
 			if err != nil {
@@ -636,10 +637,8 @@ func (st *storage) FetchKeyrings(rfps []string) ([]*hkpstorage.Keyring, error) {
 			}
 			continue
 		}
-		if key.MD5 != sqlMD5 {
+		if key.MD5 != sqlMD5 && autoPreen {
 			log.Warnf("MD5 changed while parsing (old=%s new=%s fp=%s); cleaning", sqlMD5, key.MD5, pk.Fingerprint)
-			// BEWARE if we are being called from UpsertKeys this may trigger a double-update
-			// TODO: consider throwing an exception and handling it in the caller
 			err = st.Update(key, key.KeyID(), sqlMD5)
 			if err != nil {
 				log.Errorf("Could not clean fp=%s", pk.Fingerprint)
@@ -676,7 +675,8 @@ func readOneKey(b []byte, rfingerprint string) (*openpgp.PrimaryKey, error) {
 
 func (st *storage) upsertKeyOnInsert(pubkey *openpgp.PrimaryKey) (kc hkpstorage.KeyChange, err error) {
 	var lastKey *openpgp.PrimaryKey
-	lastKeys, err := st.FetchKeys([]string{pubkey.RFingerprint})
+	// Use AutoPreen even though it may cause double-update, because FetchKeys discards sqlMD5 so we can't examine it.
+	lastKeys, err := st.FetchKeys([]string{pubkey.RFingerprint}, hkpstorage.AutoPreen)
 	if err == nil {
 		// match primary fingerprint -- someone might have reused a subkey somewhere
 		err = hkpstorage.ErrKeyNotFound

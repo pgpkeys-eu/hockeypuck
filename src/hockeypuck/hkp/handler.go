@@ -293,7 +293,7 @@ func (h *Handler) fetchKeysFromDigest(digest string) (keys []*openpgp.PrimaryKey
 		log.Errorf("error resolving hashquery digest %q", digest)
 		return
 	}
-	keys, err = h.storage.FetchKeys(rfps)
+	keys, err = h.storage.FetchKeys(rfps, storage.AutoPreen)
 	if err != nil {
 		log.Errorf("error fetching hashquery key %q", digest)
 		return
@@ -340,7 +340,7 @@ func (h *Handler) keys(l *Lookup) ([]*openpgp.PrimaryKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	keys, err := h.storage.FetchKeys(rfps)
+	keys, err := h.storage.FetchKeys(rfps, storage.AutoPreen)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -514,7 +514,7 @@ func (h *Handler) Add(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 			httpError(w, http.StatusUnprocessableEntity, errors.WithStack(err))
 			return
 		}
-		keys, err = h.storage.FetchKeys([]string{sig.RIssuerKeyID})
+		keys, err = h.storage.FetchKeys([]string{sig.RIssuerKeyID}, storage.AutoPreen)
 		if err != nil {
 			if errors.Is(err, storage.ErrKeyNotFound) {
 				httpError(w, http.StatusUnprocessableEntity, errors.WithStack(err))
@@ -705,7 +705,7 @@ func (h *Handler) checkSignature(keytext, keysig string) (string, error) {
 	for _, fp := range h.adminKeys {
 		rfps = append(rfps, openpgp.Reverse(fp))
 	}
-	adminPKs, err := h.storage.FetchKeys(rfps)
+	adminPKs, err := h.storage.FetchKeys(rfps, storage.AutoPreen)
 	if err != nil {
 		log.Errorf("could not fetch admin keys: %s", err)
 	}
