@@ -84,6 +84,7 @@ var sksDefaultFilters = []string{
 	"drop:invalidSelfSig",         // self-signatures are validated
 	"drop:unparseable",            // unparseable packets are dropped
 	"drop:structuralMartian",      // signatures in an impossible place (according to SigType) are dropped
+	"drop:implausible",            // implausible third-party sigs (according to the quick-hash) are dropped
 	"drop:unbound",                // UIDs, subkeys with no valid self-sigs are dropped
 	"drop:UAT",                    // no longer supported
 	"drop:hardRevokedCruft",       // hard direct revocation causes all UIDs and third-party sigs to be dropped (HIP-5)

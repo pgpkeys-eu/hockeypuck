@@ -81,6 +81,7 @@ type HandlerSuite struct {
 
 var _ = gc.Suite(&HandlerSuite{})
 
+// BEWARE that we have not supplied a mock.Update function, so this suite will only perform dry-run tests.
 func (s *HandlerSuite) SetUpTest(c *gc.C) {
 	s.storage = mock.NewStorage(
 		mock.Resolve(func(keys []string) ([]string, error) {
@@ -268,6 +269,7 @@ func (s *HandlerSuite) TestAddBareRevocation(c *gc.C) {
 	c.Assert(err, gc.IsNil)
 	err = json.Unmarshal(doc, &addRes)
 	c.Assert(err, gc.IsNil)
+	c.Assert(addRes.Inserted, gc.HasLen, 0)
 	c.Assert(addRes.Updated, gc.HasLen, 1)
 }
 

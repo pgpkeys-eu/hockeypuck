@@ -4,7 +4,7 @@ How to create test vectors
 To create a new test key:
 
 ```
-gpg --no-default-keyring --keyring ./admin.gpg --quick-create-key
+gpg --no-default-keyring --keyring ./admin.gpg --quick-generate-key admin@example.com
 ```
 
 To export a key:

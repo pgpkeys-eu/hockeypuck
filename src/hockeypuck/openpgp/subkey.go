@@ -93,12 +93,19 @@ func (subkey *SubKey) SigInfo(pubkey *PrimaryKey) (*SelfSigs, []*Signature) {
 	selfSigs := &SelfSigs{target: subkey}
 	var otherSigs []*Signature
 	for _, sig := range subkey.Signatures {
-		// Skip non-self-certifications.
+		// Plausify rather than verify non-self-certifications.
 		if !strings.HasPrefix(pubkey.UUID, sig.RIssuerKeyID) {
-			switch sig.SigType {
-			// NB: third-party SubkeyBinding sigs are meaningless
-			case packet.SigTypeSubkeyRevocation:
-				otherSigs = append(otherSigs, sig)
+			checkSig := &CheckSig{
+				PrimaryKey: pubkey,
+				Signature:  sig,
+				Error:      pubkey.plausifySubKeySig(&subkey.PublicKey, sig),
+			}
+			if checkSig.Error == nil {
+				switch sig.SigType {
+				// NB: third-party SubkeyBinding sigs are meaningless
+				case packet.SigTypeSubkeyRevocation:
+					otherSigs = append(otherSigs, sig)
+				}
 			}
 			continue
 		}

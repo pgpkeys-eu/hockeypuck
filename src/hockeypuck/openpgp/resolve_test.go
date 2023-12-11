@@ -283,10 +283,12 @@ func (s *ResolveSuite) TestMergeWrongRevocationSig(c *gc.C) {
 	sig, err := ParseSignature(keyrings[0].Packets[0], time.Now(), "", "")
 	c.Assert(err, gc.IsNil)
 	MergeRevocationSig(key, sig)
-	c.Assert(key.Signatures, gc.HasLen, 1) // wrong revocation is treated as a third-party sig and not validated
+	c.Assert(key.Signatures, gc.HasLen, 0) // martian revocation sig should be dropped
 	c.Assert(key.UserIDs, gc.HasLen, 1)
 }
 
+// TODO: since default revocation sigs are hard, this test is redundant.
+// Replace it with a SOFT revocation test that does not delete UIDs
 func (s *ResolveSuite) TestMergeHardRevocationSig(c *gc.C) {
 	key := MustInputAscKey("test-rtbf.asc")
 	armorBlock, err := armor.Decode(testing.MustInput("test-rtbf-revoke.asc"))

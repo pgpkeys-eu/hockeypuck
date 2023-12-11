@@ -56,6 +56,9 @@ func main() {
 	c := make(chan os.Signal, 4)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
 	go func() {
+		// BEWARE: go-staticcheck will suggest that you replace the following with `for range`.
+		// This is not how signal handling works (it is SUPPOSED to loop forever).
+		// Please DO NOT change this function unless you can explain how it works. :-)
 		for {
 			select {
 			case sig := <-c:

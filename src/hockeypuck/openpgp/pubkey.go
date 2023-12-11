@@ -291,11 +291,18 @@ func (pubkey *PrimaryKey) SigInfo() (*SelfSigs, []*Signature) {
 	selfSigs := &SelfSigs{target: pubkey}
 	var otherSigs []*Signature
 	for _, sig := range pubkey.Signatures {
-		// Skip non-self-certifications.
+		// Plausify rather than verify non-self-certifications.
 		if !strings.HasPrefix(pubkey.UUID, sig.RIssuerKeyID) {
-			switch sig.SigType {
-			case packet.SigTypeKeyRevocation, packet.SigTypeDirectSignature:
-				otherSigs = append(otherSigs, sig)
+			checkSig := &CheckSig{
+				PrimaryKey: pubkey,
+				Signature:  sig,
+				Error:      pubkey.plausifyPrimaryKeySig(sig),
+			}
+			if checkSig.Error == nil {
+				switch sig.SigType {
+				case packet.SigTypeKeyRevocation, packet.SigTypeDirectSignature:
+					otherSigs = append(otherSigs, sig)
+				}
 			}
 			continue
 		}
