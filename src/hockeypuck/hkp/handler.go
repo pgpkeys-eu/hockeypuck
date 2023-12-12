@@ -514,7 +514,10 @@ func (h *Handler) Add(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 			httpError(w, http.StatusUnprocessableEntity, errors.WithStack(err))
 			return
 		}
-		keys, err = h.storage.FetchKeys([]string{sig.RIssuerKeyID}, storage.AutoPreen)
+		log.Infof("fetching primary key for %v", sig.IssuerKeyID())
+		var l Lookup
+		l.Search = "0x" + sig.IssuerKeyID()
+		keys, err = h.keys(&l)
 		if err != nil {
 			if errors.Is(err, storage.ErrKeyNotFound) {
 				httpError(w, http.StatusUnprocessableEntity, errors.WithStack(err))
@@ -528,6 +531,7 @@ func (h *Handler) Add(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 			if err != nil {
 				log.Infof("Could not merge revocation of %s into %s", sig.IssuerKeyID(), key.Fingerprint())
 			}
+			log.Infof("Merged revocation into %s", key.Fingerprint())
 		}
 	} else if err != nil {
 		httpError(w, http.StatusBadRequest, errors.WithStack(err))

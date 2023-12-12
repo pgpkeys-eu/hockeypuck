@@ -521,3 +521,37 @@ func (s *S) TestDeleteWithAdminSig(c *gc.C) {
 	s.assertKeyNotFound(c, "0xB3836BA47C8CFE0CEBD000CBF30F9BABFDD1F1EC")
 	s.assertKey(c, "0xAEE0851B4979BACC81DC05DB3ED546F6B54D5ED3", "admin", true)
 }
+
+func (s *S) TestAddBareRevocation(c *gc.C) {
+	keytext, err := io.ReadAll(testing.MustInput("test-key.asc"))
+	c.Assert(err, gc.IsNil)
+	res, err := http.PostForm(s.srv.URL+"/pks/add", url.Values{
+		"keytext": []string{string(keytext)},
+	})
+	c.Assert(err, gc.IsNil)
+	c.Assert(res.StatusCode, gc.Equals, http.StatusOK)
+	defer res.Body.Close()
+	doc, err := io.ReadAll(res.Body)
+	c.Assert(err, gc.IsNil)
+
+	var addRes hkp.AddResponse
+	err = json.Unmarshal(doc, &addRes)
+	c.Assert(err, gc.IsNil)
+	c.Assert(addRes.Inserted, gc.HasLen, 1)
+
+	keytext, err = io.ReadAll(testing.MustInput("test-key-revoke.asc"))
+	c.Assert(err, gc.IsNil)
+
+	res2, err := http.PostForm(s.srv.URL+"/pks/add", url.Values{
+		"keytext": []string{string(keytext)},
+	})
+	c.Assert(err, gc.IsNil)
+	c.Assert(res.StatusCode, gc.Equals, http.StatusOK)
+	defer res2.Body.Close()
+	doc, err = io.ReadAll(res2.Body)
+	c.Assert(err, gc.IsNil)
+	err = json.Unmarshal(doc, &addRes)
+	c.Assert(err, gc.IsNil)
+	c.Assert(addRes.Inserted, gc.HasLen, 0)
+	c.Assert(addRes.Updated, gc.HasLen, 1)
+}
