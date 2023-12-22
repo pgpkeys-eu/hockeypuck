@@ -121,6 +121,9 @@ func ValidSelfSigned(key *PrimaryKey, selfSignedOnly bool) error {
 	}
 	key.UserIDs = userIDs
 	key.SubKeys = subKeys
+	if len(key.SubKeys) == 0 && len(key.UserIDs) == 0 && len(certs) == 0 {
+		return errors.Errorf("No valid self-signatures on key fp=%s", key.Fingerprint())
+	}
 	return key.updateMD5()
 }
 
