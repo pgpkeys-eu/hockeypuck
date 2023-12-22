@@ -517,6 +517,39 @@ func (st *storage) ModifiedSince(t time.Time) ([]string, error) {
 	return result, nil
 }
 
+var deletedKey = errors.Errorf("Key deleted")
+
+func (st *storage) preen(key *openpgp.PrimaryKey, pk jsonhkp.PrimaryKey, sqlMD5 string) error {
+	if key == nil {
+		log.Warnf("Unparseable key material in database (fp=%s); deleting", pk.Fingerprint)
+		_, err := st.Delete(pk.Fingerprint)
+		if err != nil {
+			log.Errorf("Could not delete fp=%s", pk.Fingerprint)
+			return err
+		}
+		return deletedKey
+	}
+	if len(key.SubKeys) == 0 && len(key.UserIDs) == 0 && len(key.Signatures) == 0 {
+		log.Warnf("Lone primary key packet in database (fp=%s); deleting", pk.Fingerprint)
+		_, err := st.Delete(pk.Fingerprint)
+		if err != nil {
+			log.Errorf("Could not delete fp=%s", pk.Fingerprint)
+			return err
+		}
+		return deletedKey
+	}
+	if key.MD5 != sqlMD5 {
+		log.Warnf("MD5 changed while parsing (old=%s new=%s fp=%s); cleaning", sqlMD5, key.MD5, pk.Fingerprint)
+		// Beware this may cause double-updates in some circumstances
+		err := st.Update(key, key.KeyID(), sqlMD5)
+		if err != nil {
+			log.Errorf("Could not clean fp=%s", pk.Fingerprint)
+			return err
+		}
+	}
+	return nil
+}
+
 func (st *storage) FetchKeys(rfps []string, options ...string) ([]*openpgp.PrimaryKey, error) {
 	autoPreen := slices.Contains(options, hkpstorage.AutoPreen)
 	if len(rfps) == 0 {
@@ -562,19 +595,10 @@ func (st *storage) FetchKeys(rfps []string, options ...string) ([]*openpgp.Prima
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		if key == nil && autoPreen {
-			log.Warnf("Unparseable key material in database (md5=%s, fp=%s); deleting", sqlMD5, pk.Fingerprint)
-			_, err = st.Delete(pk.Fingerprint)
+		if autoPreen {
+			err = st.preen(key, pk, sqlMD5)
 			if err != nil {
-				log.Errorf("Could not delete fp=%s", pk.Fingerprint)
-			}
-			continue
-		}
-		if key.MD5 != sqlMD5 && autoPreen {
-			log.Warnf("MD5 changed while parsing (old=%s new=%s fp=%s); cleaning", sqlMD5, key.MD5, pk.Fingerprint)
-			err = st.Update(key, key.KeyID(), sqlMD5)
-			if err != nil {
-				log.Errorf("Could not clean fp=%s", pk.Fingerprint)
+				continue
 			}
 		}
 		result = append(result, key)
@@ -629,19 +653,10 @@ func (st *storage) FetchKeyrings(rfps []string, options ...string) ([]*hkpstorag
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		if key == nil && autoPreen {
-			log.Warnf("Unparseable key material in database (fp=%s); deleting", pk.Fingerprint)
-			_, err = st.Delete(pk.Fingerprint)
+		if autoPreen {
+			err = st.preen(key, pk, sqlMD5)
 			if err != nil {
-				log.Errorf("Could not delete fp=%s", pk.Fingerprint)
-			}
-			continue
-		}
-		if key.MD5 != sqlMD5 && autoPreen {
-			log.Warnf("MD5 changed while parsing (old=%s new=%s fp=%s); cleaning", sqlMD5, key.MD5, pk.Fingerprint)
-			err = st.Update(key, key.KeyID(), sqlMD5)
-			if err != nil {
-				log.Errorf("Could not clean fp=%s", pk.Fingerprint)
+				continue
 			}
 		}
 		kr.PrimaryKey = key
