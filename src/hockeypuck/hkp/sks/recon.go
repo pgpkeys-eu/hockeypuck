@@ -120,7 +120,7 @@ func NewPeer(st storage.Storage, path string, s *recon.Settings, opts []openpgp.
 	}
 
 	cache, err := lru.New(s.SeenCacheSize)
-	if err != nil {
+	if err != nil && s.SeenCacheSize > 0 {
 		return nil, errors.WithStack(err)
 	}
 
@@ -299,6 +299,9 @@ func (r *Peer) handleRecovery() error {
 }
 
 func (r *Peer) unseenRemoteElements(rcvr *recon.Recover) []cf.Zp {
+	if r.settings.SeenCacheSize == 0 {
+		return rcvr.RemoteElements
+	}
 	unseenElements := make([]cf.Zp, 0)
 	for _, v := range rcvr.RemoteElements {
 		_, found := r.seenCache.Get(v.FullKeyHash())
@@ -352,8 +355,10 @@ func (r *Peer) requestRecovered(rcvr *recon.Recover) error {
 			if r.requestChunkSize > maxRequestChunkSize {
 				r.requestChunkSize = maxRequestChunkSize
 			}
-			for _, v := range chunk {
-				r.seenCache.Add(v.FullKeyHash(), nil)
+			if r.settings.SeenCacheSize > 0 {
+				for _, v := range chunk {
+					r.seenCache.Add(v.FullKeyHash(), nil)
+				}
 			}
 		}
 		if errCount == maxKeyRecoveryAttempts {

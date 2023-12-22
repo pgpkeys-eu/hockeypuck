@@ -185,7 +185,7 @@ const (
 	DefaultLogName                     = "conflux.recon"
 	DefaultHTTPAddr                    = ":11371"
 	DefaultReconAddr                   = ":11370"
-	DefaultSeenCacheSize               = 16384
+	DefaultSeenCacheSize               = 256
 	DefaultGossipIntervalSecs          = 60
 	DefaultMaxOutstandingReconRequests = 100
 
