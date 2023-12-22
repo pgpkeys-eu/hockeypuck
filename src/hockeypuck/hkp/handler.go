@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -242,6 +243,23 @@ func (h *Handler) HashQuery(w http.ResponseWriter, r *http.Request, _ httprouter
 		if err != nil {
 			log.Errorf("error fetching keys from digest %v: %v", digest, err)
 			return
+		}
+
+		if numKeys := len(keys); numKeys > 0 {
+			// Once per hashquery, pick a random key from the results and verify it.
+			// If it changes or evaporates, call a writeback. This gently drains cruft.
+			key := keys[rand.Intn(numKeys)]
+			oldMD5 := key.MD5
+			err = openpgp.ValidSelfSigned(key, false)
+			if err == openpgp.KeyEvaporated {
+				// This is most likely caused by our storage containing invalid cruft. Delete it.
+				_, err := storage.DeleteKey(h.storage, key.Fingerprint())
+				if err != nil {
+					log.Warnf("could not delete evaporated key %s: %s", key.Fingerprint(), err.Error())
+				}
+			} else if err == nil && key.MD5 != oldMD5 {
+				storage.UpsertKey(h.storage, key)
+			}
 		}
 
 		keysLength := 0
@@ -673,12 +691,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		return
 	}
 	for _, key := range keys {
-		err = openpgp.ValidSelfSigned(key, false)
-		if err != nil {
-			httpError(w, http.StatusInternalServerError, errors.WithStack(err))
-			return
-		}
-
 		change, err := storage.DeleteKey(h.storage, key.Fingerprint())
 		if err != nil {
 			if errors.Is(err, storage.ErrKeyNotFound) {

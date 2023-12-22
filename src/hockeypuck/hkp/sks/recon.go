@@ -85,7 +85,7 @@ var sksDefaultFilters = []string{
 	"drop:unparseable",            // unparseable packets are dropped
 	"drop:structuralMartian",      // signatures in an impossible place (according to SigType) are dropped
 	"drop:implausible",            // implausible third-party sigs (according to the quick-hash) are dropped
-	"drop:unbound",                // UIDs, subkeys with no valid self-sigs are dropped
+	"drop:unbound",                // UIDs, subkeys, pubkeys with no valid self-sigs are dropped
 	"drop:UAT",                    // no longer supported
 	"drop:hardRevokedCruft",       // hard direct revocation causes all UIDs and third-party sigs to be dropped (HIP-5)
 }
@@ -485,13 +485,14 @@ func (r *Peer) upsertKeys(rcvr *recon.Recover, buf []byte) (*upsertResult, error
 	}
 	result := &upsertResult{}
 	for _, key := range keys {
-		err = openpgp.ValidSelfSigned(key, false)
-		if err != nil {
-			return nil, errors.WithStack(err)
+		if err = openpgp.ValidSelfSigned(key, false); err != nil {
+			log.Warnf("could not upsert key %s: %s", key.Fingerprint(), err.Error())
+			continue
 		}
 		keyChange, err := storage.UpsertKey(r.storage, key)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			log.Warnf("could not upsert key %s: %s", key.Fingerprint(), err.Error())
+			continue
 		}
 		r.logAddr(RECON, rcvr.RemoteAddr).Debug(keyChange)
 		switch keyChange.(type) {
@@ -511,7 +512,7 @@ func (r *Peer) upsertKeys(rcvr *recon.Recover, buf []byte) (*upsertResult, error
 			// https://github.com/hockeypuck/hockeypuck/issues/170#issuecomment-1384003238 (note 2)
 			err = r.updateDigests(storage.KeyAddedJitter{ID: key.RFingerprint, Digest: key.MD5})
 			if err != nil {
-				return nil, errors.WithStack(err)
+				log.Warnf("could not update digests: %v", err.Error())
 			}
 		}
 	}
