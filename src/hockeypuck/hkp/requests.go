@@ -20,7 +20,7 @@ package hkp
 import (
 	"bytes"
 	"encoding/hex"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -106,8 +106,11 @@ func ParseLookup(req *http.Request) (*Lookup, error) {
 		}
 		if l.Op == OperationIndex {
 			// If it looks like a fingerprint or long-ID, normalise to "0x" format
-			fingerprintRegex := regexp.MustCompile(`^([a-fA-F0-9]{16}|[a-fA-F0-9]{32}|[a-fA-F0-9]{40})$`)
-			l.Search = fingerprintRegex.ReplaceAllString(l.Search, "0x$1")
+			fingerprintRegex := regexp.MustCompile(`^(([a-fA-F0-9]{4}\s?\s?){4}|([a-fA-F0-9]{4}\s?\s?){8}|([a-fA-F0-9]{4}\s?\s?){10}|([a-fA-F0-9]{4}\s?\s?){16})$`)
+			tempString := fingerprintRegex.ReplaceAllString(l.Search, "0x$1")
+			if tempString != l.Search {
+				l.Search = strings.ReplaceAll(tempString, " ", "")
+			}
 		}
 	}
 
@@ -232,7 +235,7 @@ func ParseHashQuery(req *http.Request) (*HashQuery, error) {
 	}
 
 	defer req.Body.Close()
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, err
 	}
