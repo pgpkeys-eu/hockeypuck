@@ -468,7 +468,7 @@ func (s *Server) listenAndServeHKPS() error {
 		return errors.Wrapf(err, "failed to load HKPS certificate=%q key=%q", s.settings.HKPS.Cert, s.settings.HKPS.Key)
 	}
 
-	ln, err := newListener(s, s.settings.HKP.Bind)
+	ln, err := newListener(s, s.settings.HKPS.Bind)
 	if err != nil {
 		return errors.WithStack(err)
 	}
