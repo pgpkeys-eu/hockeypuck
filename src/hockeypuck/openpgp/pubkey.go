@@ -326,6 +326,25 @@ func (pubkey *PrimaryKey) SigInfo() (*SelfSigs, []*Signature) {
 	return selfSigs, otherSigs
 }
 
+// RedactingSignature returns the most recent redacting sig, if one exists.
+// Redacting signatures are direct-key revocations with the reasons nil, "no reason", "key compromised",
+// and (TO BE IMPLEMENTED, #294) "user ID no longer valid".
+func (pubkey *PrimaryKey) RedactingSignature() (*Signature, error) {
+	var revoc *Signature
+	selfSigs, _ := pubkey.SigInfo()
+	for _, checkSig := range selfSigs.Revocations {
+		// Find the most recent redacting signature. Don't assume the sigs are sorted.
+		reason := checkSig.Signature.RevocationReason
+		date := checkSig.Signature.Creation
+		if reason == nil || *reason == packet.KeyCompromised || *reason == packet.NoReason {
+			if revoc == nil || revoc.Creation.Before(date) {
+				revoc = checkSig.Signature
+			}
+		}
+	}
+	return revoc, nil
+}
+
 func (pubkey *PrimaryKey) updateMD5() error {
 	digest, err := SksDigest(pubkey, md5.New())
 	if err != nil {

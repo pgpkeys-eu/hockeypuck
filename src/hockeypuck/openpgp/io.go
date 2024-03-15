@@ -86,6 +86,18 @@ func WritePackets(w io.Writer, key *PrimaryKey) error {
 	return nil
 }
 
+func WritePacket(w io.Writer, node packetNode) error {
+	op, err := newOpaquePacket(node.packet().Packet)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	err = op.Serialize(w)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
 func WriteArmoredPackets(w io.Writer, roots []*PrimaryKey, options ...KeyWriterOption) error {
 	akwr, err := NewArmoredKeyWriter(options...)
 	if err != nil {
@@ -96,7 +108,27 @@ func WriteArmoredPackets(w io.Writer, roots []*PrimaryKey, options ...KeyWriterO
 		return errors.WithStack(err)
 	}
 	defer armw.Close()
+	fullRoots := []*PrimaryKey{}
 	for _, node := range roots {
+		// Write detached redacting revocations first (except for v6 keys)
+		if node.Version < 6 {
+			revoc, err := node.RedactingSignature()
+			if err != nil {
+				log.Warnf("could not redact 0x%s: %v", node.Fingerprint(), err)
+			}
+			if revoc != nil {
+				err = WritePacket(armw, revoc)
+				if err != nil {
+					return errors.WithStack(err)
+				}
+				continue
+			}
+		}
+		// Otherwise keep hold of the key until later
+		fullRoots = append(fullRoots, node)
+	}
+	for _, node := range fullRoots {
+		// Write the remaining keys now
 		err = WritePackets(armw, node)
 		if err != nil {
 			return errors.WithStack(err)
