@@ -335,8 +335,8 @@ func (pubkey *PrimaryKey) RedactingSignature() (*Signature, error) {
 	for _, checkSig := range selfSigs.Revocations {
 		// Find the most recent redacting signature. Don't assume the sigs are sorted.
 		reason := checkSig.Signature.RevocationReason
-		date := checkSig.Signature.Creation
 		if reason == nil || *reason == packet.KeyCompromised || *reason == packet.NoReason {
+			date := checkSig.Signature.Creation
 			if revoc == nil || revoc.Creation.Before(date) {
 				revoc = checkSig.Signature
 			}
