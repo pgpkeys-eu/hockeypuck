@@ -92,8 +92,8 @@ github.com/jmcvetta/randutil
 # github.com/julienschmidt/httprouter v1.3.0
 ## explicit; go 1.7
 github.com/julienschmidt/httprouter
-# github.com/justinas/nosurf v0.0.0-20190416172904-05988550ea18
-## explicit
+# github.com/justinas/nosurf v1.1.1
+## explicit; go 1.12
 # github.com/kr/pretty v0.3.1
 ## explicit; go 1.12
 github.com/kr/pretty
